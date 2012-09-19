@@ -162,6 +162,11 @@ local BillionDelimFmt = '%s%d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. 
 local MillionDelimFmt = '%s%d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d'
 local ThousandDelimFmt = '%s%d' .. ThousandsDelim..'%03d'
 
+local function round(number)
+    if not number then return 0 end
+    return ceil(number-0.5)
+end
+
 local function FormatNumberDelimited(number)
     if tonumber(number) == nil then
         return number
@@ -322,6 +327,7 @@ local defaults = {
 				anchorX = 0,
 				anchorY = -8,
 				alwaysShow = false,
+				timeRemaining = "None",
 				unit = "player",
 				unitName = "",
 				tracking = {},
@@ -787,6 +793,30 @@ function ShieldTracker:GetOptionsForBar(name)
 							disabled = function()
 								return self.db.profile.bars[bar.name].unit ~= "named"
 							end,
+						},
+						timeRemaining = {
+							name = L["Time Remaining"],
+							desc = L["TimeRemaining_OptionDesc"],
+							type = "select",
+							values = {
+							    ["None"] = L["None"],
+							    ["RIGHT"] = L["Right"],
+							    ["LEFT"] = L["Left"],
+							},
+							order = 50,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].timeRemaining = val
+								if val == "None" then
+							        self.bars[bar.name].bar.time:Hide()
+								else
+							        self.bars[bar.name].bar.time:SetPoint(val or "RIGHT")
+							        self.bars[bar.name].bar.time:SetJustifyH(val or "RIGHT")
+							        --self.bars[bar.name].bar.time:Show()
+								end
+							end,
+			                get = function(info)
+			                    return self.db.profile.bars[bar.name].timeRemaining
+			                end,
 						},
 					},
 				},
@@ -1496,9 +1526,14 @@ local function onUpdateTimer(self, elapsed)
 		else
 			self:Show()
 			self:SetValue(self.timer)
+			if self.object.db.timeRemaining ~= "None" then
+				self.time:SetText(abs(round(self.timer)))
+				self.time:Show()
+			end
 		end
 	else
 		self:Hide()
+		self.time:Hide()
 	end
 end
 
@@ -1681,13 +1716,18 @@ function Bar:Initialize()
     bar.lock = false
 
     bar.time = bar:CreateFontString(nil, "OVERLAY")
-    bar.time:SetPoint(self.db.time_pos or "RIGHT")
     bar.time:SetFont(ff, fh, fontFlags)
     bar.time:SetJustifyH(self.db.time_pos or "RIGHT")
     bar.time:SetShadowOffset(1, -1)
     bar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
     bar.time:SetText("0")
-    bar.time:Hide()
+	if self.db.timeRemaining == "None" then
+	    bar.time:SetPoint("RIGHT")
+	    bar.time:Hide()
+	else
+	    bar.time:SetPoint(self.db.timeRemaining or "RIGHT")
+	    bar.time:Show()
+	end
 
     bar:SetMovable()
     bar:RegisterForDrag("LeftButton")
@@ -1910,11 +1950,12 @@ function Bar:UpdateGraphics()
     self.bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
     self.bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 
-    if self.db.show_time then
-        self.bar.time:Show()
-    else
+    if self.db.timeRemaining == "None" then
+	    self.bar.time:SetPoint("RIGHT")
         self.bar.time:Hide()
+    else
+		self.bar.time:SetPoint(self.db.timeRemaining or "RIGHT")
+        self.bar.time:Show()
     end
-    self.bar.time:SetPoint(self.db.time_pos or "RIGHT")
     self.bar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 end
