@@ -1002,7 +1002,7 @@ function ShieldTracker:GetOptionsForBar(name)
 							end,
 							set = function(info,val) 
 						        self.db.profile.bars[bar.name].shown = val
-						        self.bars[bar.name]:UpdateUI()
+						        self.bars[bar.name]:UpdateVisibility()
 						    end,
 						},
 					},
