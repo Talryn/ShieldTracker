@@ -86,6 +86,7 @@ local SpellIds = {
 	-- Death Knight
 	["Blood Shield"] = 77535,
 	["Death Barrier"] = 115635,
+	["Anti-Magic Shell"] = 48707,
 	-- Warrior
 	["Shield Barrier"] = 112048,
 	-- Mage
@@ -128,6 +129,7 @@ local AbsorbsTracked = {
 	["Death Knight"] = {
 		["Blood Shield"] = true,
 		["Death Barrier"] = true,
+		["Anti-Magic Shell"] = true,
 	},
 	["Monk"] = {
 		["Life Cocoon"] = true,
