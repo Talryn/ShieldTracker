@@ -1,0 +1,1918 @@
+local _G = getfenv(0)
+
+local string = _G.string
+local table = _G.table
+local math = _G.math
+local pairs = _G.pairs
+local ipairs = _G.ipairs
+local select = _G.select
+local LibStub = _G.LibStub
+
+local ShieldTracker = LibStub("AceAddon-3.0"):NewAddon("ShieldTracker", "AceConsole-3.0", "AceEvent-3.0","AceTimer-3.0")
+
+-- Try to remove the Git hash at the end, otherwise return the passed in value.
+local function cleanupVersion(version)
+	local iter = string.gmatch(version, "(.*)-[a-z0-9]+$")
+	if iter then
+		local ver = iter()
+		if ver and #ver >= 3 then
+			return ver
+		end
+	end
+	return version
+end
+
+local ADDON_NAME = ...
+local ADDON_VERSION = cleanupVersion("@project-version@")
+
+-- Define Bar for now but the rest is at the bottom of the file.
+local Bar = {}
+
+-- Local versions for performance
+local tinsert, tremove, tgetn = table.insert, table.remove, table.getn
+local tconcat = table.concat
+local floor, ceil, abs = math.floor, math.ceil, math.abs
+local rawget = rawget
+
+ShieldTracker.playerName = UnitName("player")
+ShieldTracker.bars = {}
+ShieldTracker.options = nil
+ShieldTracker.watchedUnits = {}
+-- Settings to allow custom fonts and textures which override the
+-- user set options.
+ShieldTracker.CustomUI = {
+	texture = nil,
+	font = nil,
+	fontSize = nil,
+	fontFlags = nil,
+	showBorders = nil,
+}
+
+local AGU = LibStub("AceGUI-3.0")
+local L = LibStub("AceLocale-3.0"):GetLocale("ShieldTracker", true)
+local LDB = LibStub("LibDataBroker-1.1")
+local LibQTip = LibStub("LibQTip-1.0")
+local icon = LibStub("LibDBIcon-1.0")
+local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
+
+local CURRENT_BUILD, CURRENT_INTERNAL, 
+    CURRENT_BUILD_DATE, CURRENT_UI_VERSION = GetBuildInfo()
+
+local LookupOrKeyMT = {__index = function (t,k) return k end}
+
+local ItemIds = {
+	["Indomitable Pride"] = 77211,
+}
+local ItemNames = {}
+setmetatable(ItemNames, LookupOrKeyMT)
+local function LoadItemNames()
+	for k,v in pairs(ItemIds) do
+		if not ItemNames[k] then
+			ItemNames[k] = (GetItemInfo(ItemIds[k]))
+		end
+	end
+end
+LoadItemNames()
+
+local SpellIds = {
+	-- Priest
+	["Power Word: Shield"] = 17,
+	["Divine Aegis"] = 47753,
+	["Spirit Shell"] = 114908,
+	["Angelic Bulwark"] = 114214,
+	-- Paladin
+	["Illuminated Healing"] = 86273,
+	["Sacred Shield"] = 65148,
+	-- Death Knight
+	["Blood Shield"] = 77535,
+	["Death Barrier"] = 115635,
+	-- Warrior
+	["Shield Barrier"] = 112048,
+	-- Mage
+	["Ice Barrier"] = 11426,
+	["Incanter's Ward"] = 1463,
+	-- Monk
+	["Life Cocoon"] = 116849,
+	["Guard"] = 118604, -- via the Brewmaster's Black Ox Statue
+	-- Warlock
+	["Sacrificial Pact"] = 108416,
+	-- Items
+	["Indomitable"] = 108008,
+}
+local SpellIdsRev = {}
+for k,v in pairs(SpellIds) do
+	SpellIdsRev[v] = k
+end
+local SpellNames = {}
+setmetatable(SpellNames, LookupOrKeyMT)
+local function LoadSpellNames()
+	for k,v in pairs(SpellIds) do
+		if rawget(SpellNames, k) == nil then
+			SpellNames[k] = GetSpellInfo(v)
+		end
+	end
+end
+LoadSpellNames()
+
+local AbsorbsTracked = {
+	["Priest"] = {
+		["Power Word: Shield"] = true,
+		["Divine Aegis"] = true,
+		["Spirit Shell"] = true,
+		["Angelic Bulwark"] = true,
+	},
+	["Paladin"] = {
+		["Illuminated Healing"] = true,
+		["Sacred Shield"] = true,
+	},
+	["Death Knight"] = {
+		["Blood Shield"] = true,
+		["Death Barrier"] = true,
+	},
+	["Monk"] = {
+		["Life Cocoon"] = true,
+		["Guard"] = true,
+	},
+	["Mage"] = {
+		["Ice Barrier"] = true,
+		["Incanter's Ward"] = true,
+	},
+	["Warlock"] = {
+		["Sacrificial Pact"] = true,
+	},
+	["Warrior"] = {
+		["Shield Barrier"] = true,
+	},
+	["Items"] = {
+		["Indomitable"] = true,
+	},
+}
+
+local millFmtOne = "%.1fm"
+local thousandFmtOne = "%.1fk"
+local millFmtZero = "%.0fm"
+local thousandFmtZero = "%.0fk"
+local millFmt = millFmtZero
+local thousandFmt = thousandFmtZero
+
+local ThousandsDelim = ('%.1f'):format(1/5):match('([^0-9])') == '.' and ',' or '.'
+local BillionDelimFmt = '%s%d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d'
+local MillionDelimFmt = '%s%d' .. ThousandsDelim .. '%03d' .. ThousandsDelim .. '%03d'
+local ThousandDelimFmt = '%s%d' .. ThousandsDelim..'%03d'
+
+local function FormatNumberDelimited(number)
+    if tonumber(number) == nil then
+        return number
+    end
+
+	local sign = ""
+	if number < 0 then
+		sign = "-"
+		number = abs(number)
+	end
+
+    if number >= 1000000000 then
+      return BillionDelimFmt:format(sign, number / 1000000000, (number / 1000000) % 1000, (number / 1000) % 1000, number % 1000)
+    elseif number >= 1000000 then
+      return MillionDelimFmt:format(sign, number / 1000000, (number / 1000) % 1000, number % 1000)
+    elseif number >= 1000 then
+      return ThousandDelimFmt:format(sign, number / 1000, number % 1000)
+    else
+      return tostring(number)
+    end
+end
+
+local function FormatNumberAbbreviated(number)
+    if tonumber(number) == nil then
+        return number
+    end
+
+    if number > 1000000 then
+        return millFmt:format(number / 1000000)
+    elseif number > 1000 then
+        return thousandFmt:format(number / 1000)
+    end
+
+    return number
+end
+
+local function FormatNumberRaw(number)
+	return tostring(number)
+end
+
+local FormatNumber = FormatNumberAbbreviated
+
+function ShieldTracker:SetNumberFormat(format)
+	if format == "Delimited" then
+		FormatNumber = FormatNumberDelimited
+	elseif format == "Raw" then
+		FormatNumber = FormatNumberRaw
+	else
+		FormatNumber = FormatNumberAbbreviated
+	end
+end
+
+local Broker = CreateFrame("Frame")
+Broker.obj = LDB:NewDataObject(GetAddOnMetadata(ADDON_NAME, "Title"), {
+    type = "data source",
+    icon = "Interface\\Icons\\inv_shield_07",
+    label = GetAddOnMetadata(ADDON_NAME, "Title"),
+    text = GetAddOnMetadata(ADDON_NAME, "Title"),
+    barValue = 0,
+    barR = 0,
+    barG = 0,
+    barB = 1,
+	OnClick = function(clickedframe, button)
+		if button == "RightButton" then
+			local optionsFrame = InterfaceOptionsFrame
+			if optionsFrame:IsVisible() then
+				optionsFrame:Hide()
+			else
+				ShieldTracker:ShowOptions()
+			end
+		elseif button == "LeftButton" and IsShiftKeyDown() then
+        end
+	end
+} )
+
+local GREEN = "|cff00ff00"
+local RED = "|cffff0000"
+local YELLOW = "|cffffff00"
+local BLUE = "|cff0198e1"
+local ORANGE = "|cffff9933"
+local addonHdr = BLUE.."%s %s"
+
+function Broker.obj:OnEnter()
+	local tooltip = LibQTip:Acquire("ShieldTrackerTooltip", 2, "LEFT", "RIGHT")
+	self.tooltip = tooltip 
+
+    tooltip:AddHeader(addonHdr:format(
+		GetAddOnMetadata(ADDON_NAME,"Title"), ADDON_VERSION))
+    tooltip:AddLine()
+
+	for name, bar in pairs(ShieldTracker.bars) do
+		local color = bar.db.enabled and GREEN or RED
+		tooltip:AddLine(color .. tostring(bar.name))
+	end
+
+	tooltip:SmartAnchorTo(self)
+	tooltip:Show()
+end
+
+function Broker.obj:OnLeave()
+	LibQTip:Release(self.tooltip)
+	self.tooltip = nil
+end
+
+local defaults = {
+    profile = {
+		minimap = {
+			hide = true,
+		},
+        verbose = false,
+        precision = "Zero",
+		numberFormat = "Abbreviated",
+		-- Font Settings
+		font_size = 12,
+		font_face = "Friz Quadrata TT",
+		font_outline = true,
+		font_monochrome = false,
+		font_thickoutline = false,
+        -- Skinning options
+		skinning = {
+			elvui = {
+		        enabled = true,
+		        borders = true,
+		        texture = true,
+		        font = true,
+		        font_flags = true,
+			},
+			tukui = {
+		        enabled = true,
+		        borders = true,
+		        texture = true,
+		        font = true,
+		        font_flags = true,
+			},
+		},
+		-- Bars
+		bars = {
+			-- Provide defaults for all bars.
+			-- These are inherited if no bar or no value is set.
+			['**'] = {
+				enabled = false,
+				shown = true,
+				locked = false,
+				texture = "Blizzard",
+				border = true,
+				color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
+				bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
+				textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
+				x = 0, 
+				y = 0,
+				width = 75,
+				height = 15,
+				scale = 1,
+				anchorFrame = "None",
+				anchorFrameCustom = "",
+				anchorFramePt = "BOTTOM",
+				anchorPt = "TOP",
+				anchorX = 0,
+				anchorY = -8,
+				alwaysShow = false,
+				unit = "player",
+				unitName = "",
+				tracking = {},
+			},
+		},
+	},
+}
+
+function ShieldTracker:ShowOptions()
+	InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
+end
+
+function ShieldTracker:SetSkin(update)
+    local Tukui = _G.Tukui
+    local ElvUI = _G.ElvUI
+
+    if Tukui and self.db.profile.skinning.tukui.enabled then
+        local T, C, L = unpack(Tukui)
+        if C and C["media"] then
+            local media = C["media"]
+            if media.normTex and self.db.profile.skinning.tukui.texture then
+                self.CustomUI.texture = media.normTex
+            end
+            if media.font and self.db.profile.skinning.tukui.font then
+                self.CustomUI.font = media.normFont
+            end
+            if self.db.profile.skinning.tukui.font_flags then
+                self.CustomUI.fontFlags = ""
+            end
+            if self.db.profile.skinning.tukui.borders then
+                self.CustomUI.showBorders = false
+            end
+        else
+            self:Print("Could not find Tukui config.")
+        end
+    elseif ElvUI and self.db.profile.skinning.elvui.enabled then
+        local E, L, P, G = unpack(ElvUI)
+        if E and E["media"] then
+            local media = E["media"]
+            if media.normTex and self.db.profile.skinning.elvui.texture then
+                self.CustomUI.texture = media.normTex
+            end
+            if media.normFont and self.db.profile.skinning.elvui.font then
+                self.CustomUI.font = media.normFont
+            end
+            if self.db.profile.skinning.elvui.font_flags then
+                self.CustomUI.fontFlags = ""
+            end
+            if self.db.profile.skinning.elvui.borders then
+                self.CustomUI.showBorders = false
+            end
+        else
+            self:Print("Could not find the ElvUI config.")
+        end
+	else
+        self.CustomUI.texture = nil
+        self.CustomUI.font = nil
+        self.CustomUI.fontSize = nil
+        self.CustomUI.fontFlags = nil
+        self.CustomUI.showBorders = nil
+    end
+
+	if update then
+		for name, bar in pairs(self.bars) do
+			bar:Reset()
+		end
+	end
+end
+
+function ShieldTracker:GetOptions()
+    if not self.options then
+        self.options = {
+            type = "group",
+            name = GetAddOnMetadata(ADDON_NAME, "Title"),
+            args = {
+				description = {
+					order = 1,
+					type = "description",
+					name = L["ShieldTracker_Desc"],
+				},
+				generalOpts = {
+					order = 2,
+					type = "group",
+					name = L["General Options"],
+					args = self:GetGeneralOptions(),
+				},
+				barOpts = {
+					order = 3,
+					type = "group",
+					name = L["Bars"],
+					args = self:GetBarOptions(),
+				},
+				skinningOpts = {
+					order = 4,
+					type = "group",
+					name = L["Skinning"],
+					args = self:GetSkinningOptions(),
+				},
+            },
+        }
+		--options.args.profile = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
+    end
+    return self.options
+end
+
+function ShieldTracker:GetGeneralOptions()
+	local testNumber = 12000
+	local core = {
+	    generalOptions = {
+	        order = 2,
+	        type = "group",
+			guiInline = true,
+	        name = L["General Options"],
+			args = {
+	    	    minimap = {
+	    			order = 20,
+	                name = L["Minimap Button"],
+	                desc = L["Toggle the minimap button"],
+	                type = "toggle",
+	                set = function(info,val)
+	                    	-- Reverse the value since the stored value is to hide it
+	                        self.db.profile.minimap.hide = not val
+	                    	if self.db.profile.minimap.hide then
+	                    		icon:Hide("ShieldTrackerLDB")
+	                    	else
+	                    		icon:Show("ShieldTrackerLDB")
+	                    	end
+	                      end,
+	                get = function(info)
+	            	        -- Reverse the value since the stored value is to hide it
+	                        return not self.db.profile.minimap.hide
+	                      end,
+	            },
+				numberFormat = {
+					name = L["Number Format"],
+					desc = L["NumberFormat_OptionDesc"],
+					type = "select",
+					values = {
+					    ["Raw"] = L["Raw"] .. 
+							" (" .. FormatNumberRaw(testNumber) .. ")",
+					    ["Delimited"] = L["Delimited"] .. 
+							" (" .. FormatNumberDelimited(testNumber) .. ")",
+					    ["Abbreviated"] = L["Abbreviated"] .. 
+							" (" .. FormatNumberAbbreviated(testNumber) .. ")"
+					},
+					order = 34,
+					set = function(info, val)
+					    self.db.profile.numberFormat = val
+						self:SetNumberFormat(val)
+					end,
+	                get = function(info)
+	                    return self.db.profile.numberFormat
+	                end,
+				},
+				precision = {
+					name = L["Precision"],
+					desc = L["Precision_OptionDesc"],
+					type = "select",
+					values = {
+					    ["Zero"] = L["Zero"],
+					    ["One"] = L["One"]
+					},
+					order = 35,
+					set = function(info, val)
+					    self.db.profile.precision = val
+					    if val == "One" then
+	                        millFmt = millFmtOne
+	                        thousandFmt = thousandFmtOne
+				        else
+	                        millFmt = millFmtZero
+	                        thousandFmt = thousandFmtZero
+	                    end
+					end,
+	                get = function(info)
+	                    return self.db.profile.precision
+	                end,
+				},
+				config_mode = {
+					name = L["Config Mode"],
+					desc = L["Toggle config mode"],
+					type = "execute",
+					order = 50,
+					func = function()
+					    configMode = not configMode
+						for name, bar in pairs(self.bars) do
+							if configMode then
+								bar.bar:Show()
+							else
+								bar.bar:Hide()
+							end
+						end
+					end,
+				},
+			},
+		},
+	    fonts = {
+	        order = 60,
+	        type = "group",
+			guiInline = true,
+	        name = L["Font"],
+			args = {
+				bar_font_size = {
+					order = 70,
+					name = L["Font size"],
+					desc = L["Font size for the bars."],
+					type = "range",
+					min = 8,
+					max = 30,
+					step = 1,
+					set = function(info, val) 
+						self.db.profile.font_size = val
+						for k, v in pairs(self.bars) do
+							if v then v:ResetFonts() end
+						end
+					end,
+					get = function(info,val) return self.db.profile.font_size end,
+				},
+				bar_font = {
+					order = 80,
+					type = "select",
+					name = L["Font"],
+					desc = L["Font to use."],
+					values = LSM:HashTable("font"),
+					dialogControl = 'LSM30_Font',
+					get = function() return self.db.profile.font_face end,
+					set = function(info, val) 
+					    self.db.profile.font_face = val
+						for k, v in pairs(self.bars) do
+							if v then v:ResetFonts() end
+						end
+					end
+				},
+				bar_font_outline = {
+					name = L["Outline"],
+					desc = L["FontOutline_OptionDesc"],
+					type = "toggle",
+					order = 90,
+					set = function(info, val)
+					    self.db.profile.font_outline = val
+						for k, v in pairs(self.bars) do
+							if v then v:ResetFonts() end
+						end
+					end,
+		            get = function(info)
+		                return self.db.profile.font_outline
+		            end,
+				},
+				bar_font_monochrome = {
+					name = L["Monochrome"],
+					desc = L["FontMonochrome_OptionDesc"],
+					type = "toggle",
+					order = 100,
+					set = function(info, val)
+					    self.db.profile.font_monochrome = val
+						for k, v in pairs(self.bars) do
+							if v then v:ResetFonts() end
+						end
+					end,
+		            get = function(info)
+		                return self.db.profile.font_monochrome
+		            end,
+				},
+				bar_font_thickoutline = {
+					name = L["Thick Outline"],
+					desc = L["FontThickOutline_OptionDesc"],
+					type = "toggle",
+					order = 110,
+					set = function(info, val)
+					    self.db.profile.font_thickoutline = val
+						for k, v in pairs(self.bars) do
+							if v then v:ResetFonts() end
+						end
+					end,
+		            get = function(info)
+		                return self.db.profile.font_thickoutline
+		            end,
+				},
+			},
+		},
+	}
+	return core
+end
+
+function ShieldTracker:GetBarOptions()
+	local barOpts = {
+	    --order = 1,
+		--name = L["Bars"],
+		--type = "group",
+		--args = {
+		--    description = {
+		--        order = 1,
+		--        type = "description",
+		--        name = L["Bars_Desc"],
+		--    },
+		--},
+		createBar = {
+			order = 2,
+			type = "input",
+			name = L["Create Bar"],
+			desc = L["CreateBarDesc"],
+			--validate = function(info, val)
+			--	if val and rawget(self.db.profile.bars, val) ~= nil then
+			--		return "A bar already exists with that name"
+			--	end
+			--end,
+			set = function(info, val)
+				if val and val ~= "" and 
+					rawget(self.db.profile.bars, val) == nil then
+					self:CreateNewBar(val)
+				end
+			end,
+		},
+	}
+
+	for name, bar in pairs(self.bars) do
+		local bar = self.bars[name]
+		barOpts[name.."_Bar"] = {
+			order = 100,
+			type = "group",
+			childGroups = "tab",
+			name = function() return bar.name end,
+			args = self:GetOptionsForBar(bar.name),
+		}
+	end
+
+	return barOpts
+end
+
+function ShieldTracker:CreateNewBar(name)
+	if name and rawget(self.db.profile.bars, name) == nil then
+		self.db.profile.bars[name] = self.db.profile.bars[name] or {}
+		local bar = Bar:Create(name)
+		self.options.args.barOpts.args[name.."_Bar"] = {
+			order = 100,
+			type = "group",
+			childGroups = "tab",
+			name = function() return bar.name end,
+			args = self:GetOptionsForBar(bar.name),
+		}
+	end
+end
+
+function ShieldTracker:RemoveBar(name)
+	self.options.args.barOpts.args[name.."_Bar"] = nil
+	self.bars[name]:Remove()
+end
+
+function ShieldTracker:RenameBar(old, new)
+	self.db.profile.bars[new] = self.db.profile.bars[old]
+	self.db.profile.bars[old] = nil
+	self.bars[new] = self.bars[old]
+	self.bars[old] = nil
+	self.bars[new].name = new
+	self.bars[new].friendlyName = new
+	self.options.args.barOpts.args[new.."_Bar"] = 
+		self.options.args.barOpts.args[old.."_Bar"]
+	self.options.args.barOpts.args[old.."_Bar"] = nil
+end
+
+function ShieldTracker:GetOptionsForBar(name)
+	local bar = self.bars[name]
+	local barOpts = {
+		generalOpts = {
+			order = 210,
+			type = "group",
+			name = L["General Options"],
+			args = {
+				renameBar = {
+					order = 1,
+					type = "input",
+					name = L["Rename Bar"],
+					desc = L["RenameBarDesc"],
+					--validate = function(info, val)
+					--	if val and rawget(self.db.profile.bars, val) ~= nil then
+					--		return "A bar already exists with that name"
+					--	end
+					--end,
+					set = function(info, val)
+						if val and val ~= "" and 
+							rawget(self.db.profile.bars, val) == nil then
+							self:RenameBar(bar.name, val)
+						end
+					end,
+				},
+				deleteBar = {
+					order = 2,
+					type = "execute",
+					name = L["Delete Bar"],
+					desc = L["DeleteBarDesc"],
+					width = double,
+					confirm = function()
+						return L["DeleteConfirmMsg"]
+					end,
+					func = function()
+						self:RemoveBar(bar.name)
+					end,
+				},
+	            generalOptions = {
+	                order = 5,
+	                type = "group",
+	                name = L["General Options"],
+					guiInline = true,
+					args = {
+			    		enabled = {
+							name = L["Enabled"],
+							desc = L["EnableBarDesc"],
+							type = "toggle",
+							order = 10,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].enabled = val
+								self.bars[bar.name]:UpdateVisibility()
+							end,
+			                get = function(info)
+								return self.db.profile.bars[bar.name].enabled
+							end,
+						},
+						lock = {
+							name = L["Lock bar"],
+							desc = L["LockBarDesc"],
+							type = "toggle",
+							order = 20,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].locked = val 
+								self.bars[bar.name]:Lock()
+							end,
+			                get = function(info)
+								return self.db.profile.bars[bar.name].locked
+							end,
+						},
+						unit = {
+							name = L["Unit"],
+							desc = L["UnitDesc"],
+							order = 30,
+							type = "select",
+							values = {
+							    ["player"] = L["Player"],
+							    ["target"] = L["Target"],
+							    ["focus"] = L["Focus"],
+							    ["named"] = L["Named"],
+							    ["pet"] = L["Pet"],
+							    ["mouseover"] = L["Mouseover"],
+							},
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].unit = val
+								self.bars[bar.name]:UpdateUnit()
+							end,
+			                get = function(info)
+								return self.db.profile.bars[bar.name].unit
+							end,
+						},
+						unitName = {
+							name = L["Unit Name"],
+							desc = L["UnitNameDesc"],
+							order = 40,
+							type = "input",
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].unitName = val
+								self.bars[bar.name]:UpdateUnit()
+							end,
+			                get = function(info)
+								return self.db.profile.bars[bar.name].unitName
+							end,
+							disabled = function()
+								return self.db.profile.bars[bar.name].unit ~= "named"
+							end,
+						},
+					},
+				},
+	            dimensions = {
+	                order = 300,
+	                type = "group",
+					guiInline = true,
+	                name = L["Dimensions"],
+					args = {
+						width = {
+							order = 310,
+							name = L["Width"],
+							desc = L["BarWidth_Desc"],	
+							type = "range",
+							min = 50,
+							max = 300,
+							step = 1,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].width = val 
+								self.bars[bar.name].bar:SetWidth(val)
+								self.bars[bar.name].bar.border:SetWidth(val+9)
+							end,
+							get = function(info, val)
+							    return self.db.profile.bars[bar.name].width
+							end,
+						},
+						height = {
+							order = 320,
+							name = L["Height"],
+							desc = L["BarHeight_Desc"],
+							type = "range",
+							min = 10,
+							max = 30,
+							step = 1,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].height = val 
+								self.bars[bar.name].bar:SetHeight(val)
+								self.bars[bar.name].bar.border:SetHeight(val + 8)
+							end,
+							get = function(info, val)
+							    return self.db.profile.bars[bar.name].height
+							end,					
+						},
+						scale = {
+							order = 330,
+							name = L["Scale"],
+							desc = L["ScaleDesc"],
+							type = "range",
+							min = 0.1,
+							max = 3,
+							step = 0.1,
+							get = function()
+								return self.db.profile.bars[bar.name].scale
+							end,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].scale = val
+							    self.bars[bar.name].bar:SetScale(val)
+							end
+						},
+					},
+				},
+	            position = {
+	                order = 400,
+	                type = "group",
+					guiInline = true,
+	                name = L["Position"],
+					args = {
+						x = {
+							order = 410,
+							name = L["X Offset"],
+							desc = L["XOffset_Desc"],	
+							type = "range",
+							softMin = -floor(GetScreenWidth()/2),
+							softMax = floor(GetScreenWidth()/2),
+							bigStep = 1,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].x = val
+								self.bars[bar.name].bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars[bar.name].x, 
+									self.db.profile.bars[bar.name].y)
+							end,
+							get = function(info, val)
+							    return self.db.profile.bars[bar.name].x
+							end,
+						},
+						y = {
+							order = 420,
+							name = L["Y Offset"],
+							desc = L["YOffset_Desc"],	
+							type = "range",
+							softMin = -floor(GetScreenHeight()/2),
+							softMax = floor(GetScreenHeight()/2),
+							bigStep = 1,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].y = val
+								self.bars[bar.name].bar:SetPoint(
+									"CENTER", UIParent, "CENTER", 
+									self.db.profile.bars[bar.name].x, 
+									self.db.profile.bars[bar.name].y)
+							end,
+							get = function(info, val)
+							    return self.db.profile.bars[bar.name].y
+							end,
+						},
+					},
+				},
+			},
+		},
+		appearanceOpts = {
+			order = 215,
+			type = "group",
+			name = L["Appearance"],
+			args = {
+	            colors = {
+	                order = 500,
+	                type = "group",
+					guiInline = true,
+	                name = L["Colors"],
+					args = {
+						textcolor = {
+							order = 510,
+							name = L["Text Color"],
+							desc = L["BarTextColor_OptionDesc"],
+							type = "color",
+							hasAlpha = true,
+							set = function(info, r, g, b, a)
+							    local c = self.db.profile.bars[bar.name].textcolor
+							    c.r, c.g, c.b, c.a = r, g, b, a
+							    self.bars[bar.name]:UpdateGraphics()
+							end,
+							get = function(info)
+						        local c = self.db.profile.bars[bar.name].textcolor
+							    return c.r, c.g, c.b, c.a
+							end,					
+						},
+						color = {
+							order = 520,
+							name = L["Bar Color"],
+							desc = L["BarColor_OptionDesc"],
+							type = "color",
+							hasAlpha = true,
+							set = function(info, r, g, b, a)
+							    local c = self.db.profile.bars[bar.name].color
+							    c.r, c.g, c.b, c.a = r, g, b, a
+							    self.bars[bar.name]:UpdateGraphics()
+							end,
+							get = function(info)
+						        local c = self.db.profile.bars[bar.name].color
+							    return c.r, c.g, c.b, c.a
+							end,					
+						},
+						bgcolor = {
+							order = 530,
+							name = L["Bar Background Color"],
+							desc = L["BarBackgroundColor_OptionDesc"],
+							type = "color",
+							hasAlpha = true,
+							set = function(info, r, g, b, a)
+							    local c = self.db.profile.bars[bar.name].bgcolor
+							    c.r, c.g, c.b, c.a = r, g, b, a
+							    self.bars[bar.name]:UpdateGraphics()
+							end,
+							get = function(info)
+						        local c = self.db.profile.bars[bar.name].bgcolor
+							    return c.r, c.g, c.b, c.a
+							end,					
+						},
+					},
+				},
+	            appearance = {
+	                order = 600,
+	                type = "group",
+					guiInline = true,
+	                name = L["Appearance"],
+					args = {
+						texture = {
+							order = 610,
+							name = L["Texture"],
+							desc = L["BarTexture_OptionDesc"],
+							type = "select",
+							values = LSM:HashTable("statusbar"),
+							dialogControl = 'LSM30_Statusbar',
+							get = function()
+							    return self.db.profile.bars[bar.name].texture
+							end,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].texture = val
+							    self.bars[bar.name]:UpdateTexture()
+							end,
+							disabled = function()
+							    return not self.db.profile.bars[bar.name].shown
+							end,
+						},
+						borderVisible = {
+							order = 620,
+							name = L["ShowBorder"],
+							desc = L["ShowBorderDesc"],
+							type = "toggle",
+							get = function()
+							    return self.db.profile.bars[bar.name].border
+							end,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].border = val
+							    self.bars[bar.name]:UpdateBorder()
+							end,
+						},
+						barVisible = {
+							order = 630,
+							name = L["ShowBar"],
+							desc = L["ShowBarDesc"],
+							type = "toggle",
+							get = function()
+								return self.db.profile.bars[bar.name].shown
+							end,
+							set = function(info,val) 
+						        self.db.profile.bars[bar.name].shown = val
+						        self.bars[bar.name]:UpdateUI()
+						    end,
+						},
+					},
+				},
+			},
+		},
+		absorbOpts = {
+			order = 220,
+			type = "group",
+			name = L["Absorbs Tracked"],
+			args = {},
+		},
+		anchorOpts = {
+			order = 230,
+			type = "group",
+			name = L["Anchor"],
+			args = self:GetAdvancedPositioning(bar.name),
+		},
+	}
+
+	local i = 810
+	for category, spells in pairs(AbsorbsTracked) do
+		barOpts.absorbOpts.args["ATC_"..category] = {
+			order = i,
+            type = "header",
+            name = category,
+		}
+		i = i + 1
+		
+		for spell, enabled in pairs(spells) do
+			barOpts.absorbOpts.args["AT_"..spell] = {
+				order = i,
+				name = SpellNames[spell],
+				desc = SpellNames[spell],
+				type = "toggle",
+				get = function()
+					return self.db.profile.bars[bar.name].tracking[spell]
+				end,
+				set = function(info,val) 
+			        self.db.profile.bars[bar.name].tracking[spell] = val
+					self.bars[bar.name]:CheckTracking()
+			    end,
+			}
+			i = i + 1
+		end
+	end
+
+	return barOpts
+end
+
+function ShieldTracker:GetSkinningOptions()
+	local skinningOpts = {
+	    description = {
+	        order = 1,
+	        type = "description",
+	        name = L["Skinning_Desc"],
+	    },
+	    elvuiOptions = {
+	        order = 10,
+	        type = "group",
+			guiInline = true,
+	        name = L["ElvUI"],
+			args = {
+	            elvui_enabled = {
+	                name = L["Enabled"],
+					order = 20,
+	                desc = L["ElvUIEnabled_OptionDesc"],
+	                type = "toggle",
+	                set = function(info, val)
+	                    self.db.profile.skinning.elvui.enabled = val
+						self:SetSkin(true)
+	                end,
+	                get = function(info)
+	                    return self.db.profile.skinning.elvui.enabled
+	                end,
+	            },
+	            elvui_borders = {
+	                name = L["Borders"],
+					order = 30,
+	                desc = L["ElvUIBorders_OptionDesc"],
+	                type = "toggle",
+	                set = function(info, val)
+	                    self.db.profile.skinning.elvui.borders = val
+						self:SetSkin(true)
+	                end,
+	                get = function(info)
+	                    return self.db.profile.skinning.elvui.borders
+	                end,
+	            },
+	            elvui_texture = {
+	                name = L["Texture"],
+					order = 40,
+	                desc = L["ElvUITexture_OptionDesc"],
+	                type = "toggle",
+	                set = function(info, val)
+	                    self.db.profile.skinning.elvui.texture = val
+						self:SetSkin(true)
+	                end,
+	                get = function(info)
+	                    return self.db.profile.skinning.elvui.texture
+	                end,
+	            },
+	            elvui_font = {
+	                name = L["Font"],
+					order = 50,
+	                desc = L["ElvUIFont_OptionDesc"],
+	                type = "toggle",
+	                set = function(info, val)
+	                    self.db.profile.skinning.elvui.font = val
+						self:SetSkin(true)
+	                end,
+	                get = function(info)
+	                    return self.db.profile.skinning.elvui.font
+	                end,
+	            },
+	            elvui_font_flags = {
+	                name = L["Font Flags"],
+					order = 60,
+	                desc = L["ElvUIFontFlags_OptionDesc"],
+	                type = "toggle",
+	                set = function(info, val)
+	                    self.db.profile.skinning.elvui.font_flags = val
+						self:SetSkin(true)
+	                end,
+	                get = function(info)
+	                    return self.db.profile.skinning.elvui.font_flags
+	                end,
+	            },
+			},
+		},
+	    tukuiOptions = {
+	        order = 100,
+	        type = "group",
+			guiInline = true,
+	        name = L["Tukui"],
+			args = {
+	            tukui_enabled = {
+	                name = L["Enabled"],
+					order = 110,
+	                desc = L["TukuiEnabled_OptionDesc"],
+	                type = "toggle",
+	                set = function(info, val)
+	                    self.db.profile.skinning.tukui.enabled = val
+						self:SetSkin(true)
+	                end,
+	                get = function(info)
+	                    return self.db.profile.skinning.tukui.enabled
+	                end,
+	            },
+	            tukui_borders = {
+	                name = L["Borders"],
+					order = 120,
+	                desc = L["TukuiBorders_OptionDesc"],
+	                type = "toggle",
+	                set = function(info, val)
+	                    self.db.profile.skinning.tukui.borders = val
+						self:SetSkin(true)
+	                end,
+	                get = function(info)
+	                    return self.db.profile.skinning.tukui.borders
+	                end,
+	            },
+	            tukui_texture = {
+	                name = L["Texture"],
+					order = 130,
+	                desc = L["TukuiTexture_OptionDesc"],
+	                type = "toggle",
+	                set = function(info, val)
+	                    self.db.profile.skinning.tukui.texture = val
+						self:SetSkin(true)
+	                end,
+	                get = function(info)
+	                    return self.db.profile.skinning.tukui.texture
+	                end,
+	            },
+	            tukui_font = {
+	                name = L["Font"],
+					order = 140,
+	                desc = L["TukuiFont_OptionDesc"],
+	                type = "toggle",
+	                set = function(info, val)
+	                    self.db.profile.skinning.tukui.font = val
+						self:SetSkin(true)
+	                end,
+	                get = function(info)
+	                    return self.db.profile.skinning.tukui.font
+	                end,
+	            },
+	            tukui_font_flags = {
+	                name = L["Font Flags"],
+					order = 150,
+	                desc = L["TukuiFontFlags_OptionDesc"],
+	                type = "toggle",
+	                set = function(info, val)
+	                    self.db.profile.skinning.tukui.font_flags = val
+						self:SetSkin(true)
+	                end,
+	                get = function(info)
+	                    return self.db.profile.skinning.tukui.font_flags
+	                end,
+	            },
+			},
+		},
+    }
+	return skinningOpts
+end
+
+function ShieldTracker:GetAnchorList(barName)
+	local bar = self.bars[barName]
+	bar.anchorList = bar.anchorList or {}
+	wipe(bar.anchorList)
+	for name, obj in pairs(self.bars) do
+		if name ~= bar.name then
+			bar.anchorList["ShieldTracker_"..name] = name
+		end
+	end
+    bar.anchorList["None"] = L["None"]
+    bar.anchorList["Custom"] = L["Custom"]
+	if select(6, GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
+		self.db.profile.bars[bar.name].anchorFrame == "Compact Runes" then
+		bar.anchorList["Compact Runes"] = L["Compact Runes"]
+	end
+	return bar.anchorList
+end
+
+function ShieldTracker:GetAdvancedPositioning(name)
+	local bar = self.bars[name]
+	local options = {
+	    description = {
+	        order = 1001,
+	        type = "description",
+	        name = L["Anchor_Desc"],
+		},
+		anchorFrame = {
+			name = L["Anchor"],
+			desc = L["Anchor_OptDesc"],
+			type = "select",
+			values = self:GetAnchorList(bar.name),
+			order = 1010,
+			set = function(info, val)
+			    self.db.profile.bars[bar.name].anchorFrame = val
+				bar:UpdatePosition()
+			end,
+	        get = function(info)
+	            return self.db.profile.bars[bar.name].anchorFrame
+	        end,
+		},
+		anchorFrameCustom = {
+			name = L["Frame"],
+			desc = L["Frame_OptDesc"],
+			type = "input",
+			width = "double",
+			order = 1020,
+			set = function(info, val)
+			    self.db.profile.bars[bar.name].anchorFrameCustom = val
+				bar:UpdatePosition()
+			end,
+	        get = function(info)
+	            return self.db.profile.bars[bar.name].anchorFrameCustom
+	        end,
+			disabled = function()
+				return self.db.profile.bars[bar.name].anchorFrame ~= "Custom"
+			end,
+		},
+		anchorFramePt = {
+			name = L["Anchor Point"],
+			desc = L["AnchorPoint_OptDesc"],
+			type = "select",
+			values = {
+			    ["TOP"] = L["Top"],
+			    ["BOTTOM"] = L["Bottom"],
+			    ["LEFT"] = L["Left"],
+			    ["RIGHT"] = L["Right"],
+			},
+			order = 1030,
+			set = function(info, val)
+			    self.db.profile.bars[bar.name].anchorFramePt = val
+				bar:UpdatePosition()
+			end,
+	        get = function(info)
+	            return self.db.profile.bars[bar.name].anchorFramePt
+	        end,
+			disabled = function()
+				return self.db.profile.bars[bar.name].anchorFrame == "None"
+			end,
+		},
+		anchorPt = {
+			name = L["Bar Point"],
+			desc = L["BarPoint_OptDesc"],
+			type = "select",
+			values = {
+			    ["TOP"] = L["Top"],
+			    ["BOTTOM"] = L["Bottom"],
+			    ["LEFT"] = L["Left"],
+			    ["RIGHT"] = L["Right"],
+			},
+			order = 1040,
+			set = function(info, val)
+			    self.db.profile.bars[bar.name].anchorPt = val
+				bar:UpdatePosition()
+			end,
+	        get = function(info)
+	            return self.db.profile.bars[bar.name].anchorPt
+	        end,
+			disabled = function()
+				return self.db.profile.bars[bar.name].anchorFrame == "None"
+			end,
+		},
+		anchorX = {
+			order = 1050,
+			name = L["X Offset"],
+			desc = L["XOffsetAnchor_Desc"],	
+			type = "range",
+			softMin = -floor(GetScreenWidth()),
+			softMax = floor(GetScreenWidth()),
+			bigStep = 1,
+			set = function(info, val)
+			    self.db.profile.bars[bar.name].anchorX = val
+				bar:UpdatePosition()
+			end,
+			get = function(info, val)
+			    return self.db.profile.bars[bar.name].anchorX
+			end,
+			disabled = function()
+				return self.db.profile.bars[bar.name].anchorFrame == "None"
+			end,
+		},
+		anchorY = {
+			order = 1060,
+			name = L["Y Offset"],
+			desc = L["YOffsetAnchor_Desc"],	
+			type = "range",
+			softMin = -floor(GetScreenHeight()),
+			softMax = floor(GetScreenHeight()),
+			bigStep = 1,
+			set = function(info, val)
+			    self.db.profile.bars[bar.name].anchorY = val
+				bar:UpdatePosition()
+			end,
+			get = function(info, val)
+			    return self.db.profile.bars[bar.name].anchorY
+			end,
+			disabled = function()
+				return self.db.profile.bars[bar.name].anchorFrame == "None"
+			end,
+		},
+	}
+	return options
+end
+
+function ShieldTracker:ChatCommand(input)
+    if not input or input:trim() == "" then
+        self:ShowOptions()
+	end
+end
+
+function ShieldTracker:OnInitialize()
+    -- Load the settings
+    self.db = LibStub("AceDB-3.0"):New("ShieldTrackerDB", defaults, "Default")
+
+	-- Set the number format
+	self:SetNumberFormat(self.db.profile.numberFormat)
+
+    -- Set the precision
+    if self.db.profile.precision == "One" then
+        millFmt = millFmtOne
+        thousandFmt = thousandFmtOne
+    else
+        millFmt = millFmtZero
+        thousandFmt = thousandFmtZero
+    end
+
+	icon:Register("ShieldTrackerLDB", Broker.obj, self.db.profile.minimap)
+	LSM.RegisterCallback(ShieldTracker, "LibSharedMedia_Registered")
+
+	self:SetSkin()
+
+	-- Loop through the bars and create them
+	for k, v in pairs(self.db.profile.bars) do
+		Bar:Create(k)
+	end
+end
+
+function ShieldTracker:OnEnable()
+	self:Load()
+	LoadSpellNames()
+
+	if not self.optionsFrame then
+	    local displayName = GetAddOnMetadata(ADDON_NAME, "Title")
+		local options = self:GetOptions()
+	    LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(displayName, options)
+
+	    self.optionsFrame = {}
+	    local ACD = LibStub("AceConfigDialog-3.0")
+		self.optionsFrame.Main = ACD:AddToBlizOptions(
+		    displayName, displayName, nil)
+		--self.optionsFrame.Bars = ACD:AddToBlizOptions(
+		--    displayName, L["Bars"], displayName, "barOpts")
+		LibStub("AceConfig-3.0"):RegisterOptionsTable("ShieldTracker-Profiles", 
+			LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db))
+		self.optionsFrame.Profiles = ACD:AddToBlizOptions(
+		    "ShieldTracker-Profiles", "Profiles", displayName)
+	    self:RegisterChatCommand("shieldtracker", "ChatCommand")
+	    self:RegisterChatCommand("stracker", "ChatCommand")
+	end
+end
+
+local WatchedEvents = {
+	"PLAYER_REGEN_DISABLED",
+	"PLAYER_REGEN_ENABLED",
+	"PLAYER_TARGET_CHANGED",
+	"UNIT_AURA",
+	"PLAYER_FOCUS_CHANGED",
+}
+function ShieldTracker:Load()
+	for i = 1, #WatchedEvents do
+		self:RegisterEvent(WatchedEvents[i])
+	end
+end
+
+function ShieldTracker:Unload()
+end
+
+function ShieldTracker:OnDisable()
+	for i = 1, #WatchedEvents do
+		self:UnregisterEvent(WatchedEvents[i])
+	end
+end
+
+function ShieldTracker:Reset()
+	-- Reset positions
+	for name,bar in pairs(self.bars) do
+		bar.db = self.db.profile.bars[bar.name]
+		bar:Reset()
+	end
+end
+
+function ShieldTracker:GetFontSettings()
+	local ff, fh, fontFlags
+
+    -- If a custom font is set, then override the settings
+    if self.CustomUI.font then
+        ff = self.CustomUI.font
+    else
+	    ff = LSM:Fetch("font", self.db.profile.font_face)
+    end
+    if self.CustomUI.fontSize then
+        fh = self.CustomUI.fontSize
+    else
+        fh = self.db.profile.font_size
+    end
+    if self.CustomUI.fontFlags then
+        fontFlags = self.CustomUI.fontFlags
+    else
+        fontFlags = self:GetFontFlags()
+    end
+
+	return ff, fh, fontFlags
+end
+
+function ShieldTracker:GetFontFlags()
+    local flags = {}
+    if self.db.profile.font_outline then
+        tinsert(flags, "OUTLINE")
+    end
+    if self.db.profile.font_monochrome then
+        tinsert(flags, "MONOCHROME")
+    end
+    if self.db.profile.font_thickoutline then
+        tinsert(flags, "THICKOUTLINE")
+    end
+    return tconcat(flags, ",")
+end
+
+local ShieldsFound = {}
+
+function ShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
+	self:Reset()
+end
+
+local function onUpdateTimer(self, elapsed)
+	if self.active then
+		self.timer = self.timer - elapsed
+		if self.timer < 0 then
+			self.timer = 0
+			self.active = false
+			self:SetScript("OnUpdate", nil)
+			self:Hide()
+		else
+			self:Show()
+			self:SetValue(self.timer)
+		end
+	else
+		self:Hide()
+	end
+end
+
+function ShieldTracker:CheckAuras(unit)
+	local unitName = GetUnitName(unit, true)
+	if not self.watchedUnits[unit] and not self.watchedUnits[unitName] then
+		return
+	end
+
+    local name, rank, icon, count, dispelType, duration, expires,
+        caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
+		value, value2, value3
+
+	local shields = ShieldsFound
+	wipe(shields)
+
+    i = 1
+    repeat
+        name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+            consolidate, spellId, canApplyAura, isBossDebuff, 
+			value, value2, value3 = UnitAura(unit, i)
+        if name == nil or spellId == nil then break end
+
+		local lookup = SpellIdsRev[spellId]
+		if lookup then
+			shields[lookup] = (shields[lookup] or 0) + value
+		end
+
+        i = i + 1
+    until name == nil
+
+	for barName, bar in pairs(self.bars) do
+		if bar.db.enabled and (bar.unit == unit or 
+			(bar.unit == unitName)) then
+
+			if UnitExists(unit) or UnitExists(unitName) then
+				local totalValue = 0
+				for k, v in pairs(bar.db.tracking) do
+					if k and v then
+						totalValue = totalValue + (shields[k] or 0)
+					end
+				end
+				if totalValue > 0 then
+					bar:SetValue(totalValue)
+					bar.bar:Show()
+					if bar.singleSpell then
+				        name, rank, icon, count, dispelType, duration, 
+						expires, caster, stealable, consolidate, spellId, 
+						canApplyAura, isBossDebuff, value, value2, 
+						value3 = UnitAura(unit, SpellNames[bar.singleSpell])
+						if name then
+							bar.bar.active = true
+							bar.bar.timer = expires - GetTime()
+							bar.bar:SetMinMaxValues(0, duration)
+							bar.bar:SetScript("OnUpdate", onUpdateTimer)
+						end
+					else
+						bar.bar:SetMinMaxValues(0, 1)
+						bar.bar:SetValue(1)					
+					end
+				else
+					bar.bar:Hide()
+					bar.bar.active = false
+					bar.bar.timer = 0
+					bar.bar:SetScript("OnUpdate", nil)
+				end
+			else
+				bar.bar:Hide()
+				bar.bar.active = false
+				bar.bar.timer = 0
+				bar.bar:SetScript("OnUpdate", nil)
+			end
+		end
+	end
+end
+
+function ShieldTracker:PLAYER_REGEN_DISABLED(event)
+end
+
+function ShieldTracker:PLAYER_REGEN_ENABLED(event)
+end
+
+function ShieldTracker:PLAYER_TARGET_CHANGED(event, unit)
+	self:CheckAuras("target")
+end
+
+function ShieldTracker:PLAYER_FOCUS_CHANGED(event, unit)
+	self:CheckAuras("focus")
+end
+
+function ShieldTracker:UNIT_AURA(event, unit)
+	self:CheckAuras(unit)
+end
+
+local FrameNames = {
+	["Compact Runes"] = "CompactRunes_RunicPowerBar",
+}
+
+local function IsFrame(frame)
+	if frame and type(frame) == "string" then
+		local f = GetClickFrame(frame)
+		if f and type(f) == "table" and f.SetPoint and f.GetName then
+			return true
+		end
+	end
+	return false
+end
+
+-- Define a generic class for the bars
+Bar.__index = Bar
+
+function Bar:Create(name, friendlyName, disableAnchor)
+	if ShieldTracker.bars[name] then return end
+    local object = setmetatable({}, Bar)
+	object.name = name
+	object.friendlyName = friendlyName or name
+	object.anchorTries = 0
+	object.db = ShieldTracker.db.profile.bars[object.name]
+	object.unit = (object.db.unit == "named") and 
+		object.db.unitName or object.db.unit
+	ShieldTracker.watchedUnits[object.unit] = 
+		(ShieldTracker.watchedUnits[object.unit] or 0) + 1
+	object.singleSpell = nil
+	object:Initialize()
+	-- Add the bar to the addon's table of bars
+	ShieldTracker.bars[name] = object
+	if not disableAnchor then
+		FrameNames[object.friendlyName] = object.bar:GetName()
+	end
+	object:UpdatePosition()
+	object:CheckTracking()
+	object:Skin()
+	return object
+end
+
+function Bar:Initialize()
+    local bar = CreateFrame("StatusBar", "ShieldTracker_"..self.name, UIParent)
+	self.bar = bar
+	bar.object = self
+	bar.active = false
+	bar.timer = 0
+    --bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
+	bar:SetScale(self.db.scale)
+    bar:SetOrientation("HORIZONTAL")
+    bar:SetWidth(self.db.width)
+    bar:SetHeight(self.db.height)
+	local bt
+    if ShieldTracker.CustomUI.texture then
+        bt = ShieldTracker.CustomUI.texture
+    else
+	    bt = LSM:Fetch("statusbar", self.db.texture)
+    end
+    bar:SetStatusBarTexture(bt)
+    bar:GetStatusBarTexture():SetHorizTile(false)
+    bar:GetStatusBarTexture():SetVertTile(false)
+    local bc = self.db.color
+    bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+    bar.bg = bar:CreateTexture(nil, "BACKGROUND")
+    bar.bg:SetTexture(bt)
+    bar.bg:SetAllPoints(true)
+    local bgc = self.db.bgcolor
+    bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+    bar.border = bar:CreateTexture(nil, "BACKGROUND")
+    bar.border:SetPoint("CENTER")
+    bar.border:SetWidth(bar:GetWidth()+9)
+    bar.border:SetHeight(bar:GetHeight()+8)
+    bar.border:SetTexture("Interface\\Tooltips\\UI-StatusBar-Border")
+	if not self.db.border or ShieldTracker.CustomUI.showBorders == false then
+		bar.border:Hide()
+	end
+	local ff, fh, fontFlags = ShieldTracker:GetFontSettings()
+    bar.value = bar:CreateFontString(nil, "OVERLAY")
+    bar.value:SetPoint("CENTER")
+    bar.value:SetFont(ff, fh, fontFlags)
+    bar.value:SetJustifyH("CENTER")
+    bar.value:SetShadowOffset(1, -1)
+    local tc = self.db.textcolor
+    bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    bar.value:SetText("0")
+    bar.lock = false
+
+    bar.time = bar:CreateFontString(nil, "OVERLAY")
+    bar.time:SetPoint(self.db.time_pos or "RIGHT")
+    bar.time:SetFont(ff, fh, fontFlags)
+    bar.time:SetJustifyH(self.db.time_pos or "RIGHT")
+    bar.time:SetShadowOffset(1, -1)
+    bar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+    bar.time:SetText("0")
+    bar.time:Hide()
+
+    bar:SetMovable()
+    bar:RegisterForDrag("LeftButton")
+    bar:SetScript("OnDragStart",
+        function(self, button)
+			if not self.lock then
+            	self:StartMoving()
+			end
+        end)
+    bar:SetScript("OnDragStop",
+        function(self)
+            self:StopMovingOrSizing()
+			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
+			local x, y = self:GetCenter()
+			x, y = x * scale, y * scale
+			x = x - GetScreenWidth()/2
+			y = y - GetScreenHeight()/2
+			x = x / self:GetScale()
+			y = y / self:GetScale()
+			self.object.db.x, self.object.db.y = x, y
+			self:SetUserPlaced(false);
+        end)
+    bar:EnableMouse(true)
+    bar:SetMinMaxValues(0, 1)
+    bar:SetValue(1)
+    bar:Hide()
+	self:Lock(self.db.locked)
+end
+
+function Bar:Lock(locked)
+	if locked == nil then
+		locked = self.db.locked
+	end
+
+	self.bar.lock = locked
+    if locked then
+        self.bar:EnableMouse(false)
+    else
+        self.bar:EnableMouse(true)
+    end
+end
+
+function Bar:Hide()
+	self.bar:Hide()
+end
+
+function Bar:Remove()
+	ShieldTracker.watchedUnits[self.unit] = 
+		(ShieldTracker.watchedUnits[self.unit] or 0) + 1
+	ShieldTracker.db.profile.bars[self.name] = nil
+	ShieldTracker.bars[self.name] = nil
+	self.bar:Hide()
+end
+
+function Bar:UpdateUnit()
+	local oldUnit = self.unit
+	local newUnit = (self.db.unit == "named") and 
+		self.db.unitName or self.db.unit
+	if oldUnit ~= newUnit then
+		ShieldTracker.watchedUnits[oldUnit] = 
+			(ShieldTracker.watchedUnits[oldUnit] or 0) - 1
+		if ShieldTracker.watchedUnits[oldUnit] < 1 then
+			ShieldTracker.watchedUnits[oldUnit] = nil
+		end
+		self.unit = newUnit
+		ShieldTracker.watchedUnits[newUnit] = 
+			(ShieldTracker.watchedUnits[newUnit] or 0) + 1
+	end
+end
+
+function Bar:CheckTracking()
+	local tracked, spell = 0, nil
+	for k, v in pairs(self.db.tracking) do
+		if k and v then
+			tracked = tracked + 1
+			spell = k
+		end
+	end
+	if tracked == 1 then
+		self.singleSpell = spell
+	else
+		self.singleSpell = nil
+	end
+end
+
+function Bar:SetValue(value)
+	if self.db.enabled then
+		self.bar.value:SetText(FormatNumber(value))
+	end
+end
+
+function Bar:Reset()
+	self:Lock()
+	self:UpdatePosition()
+	self:UpdateTexture()
+	self:UpdateBorder()
+	self:UpdateVisibility()
+	self:UpdateGraphics()
+end
+
+function Bar:Skin()
+    local Tukui = _G.Tukui
+    local ElvUI = _G.ElvUI
+
+    if (ElvUI and ShieldTracker.db.profile.skinning.elvui.enabled) or
+		(Tukui and ShieldTracker.db.profile.skinning.tukui.enabled) then
+		self:Reset()
+	end
+end
+
+function Bar:UpdatePosition()
+	local anchorFrame = FrameNames[self.db.anchorFrame]
+	if not anchorFrame and self.db.anchorFrame == "Custom" then
+		anchorFrame = self.db.anchorFrameCustom
+	end
+
+	self.bar:ClearAllPoints()
+
+	local isFrame = IsFrame(anchorFrame)
+	local ST = ShieldTracker
+	if anchorFrame and isFrame then
+		if ST.db.profile.debug then
+			ST:Print("Found anchor for bar '"..tostring(self.name).."'.")
+		end
+		self.bar:SetPoint(
+			self.db.anchorPt, anchorFrame, self.db.anchorFramePt, 
+			self.db.anchorX, self.db.anchorY)
+		self.anchorTries = 0
+	else
+		self.bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
+		if anchorFrame and not isFrame and self.anchorTries < 13 then
+			if ST.db.profile.debug then
+				ST:Print("Waiting for anchor for bar '"..tostring(self.name).."'.")
+			end
+	    	ST:ScheduleTimer(Bar.UpdatePosition, 5, self)
+			self.anchorTries = (self.anchorTries or 0) + 1
+		else
+			self.anchorTries = 0
+		end
+	end
+end
+
+function Bar:ResetFonts()
+	local ff, fh, fontFlags = ShieldTracker:GetFontSettings()
+	self.bar.value:SetFont(ff, fh, fontFlags)						
+	self.bar.value:SetText(self.bar.value:GetText())
+	self.bar.time:SetFont(ff, fh, fontFlags)
+	self.bar.time:SetText(self.bar.time:GetText())
+end
+
+function Bar:UpdateVisibility()
+	local show = self.db.shown
+	if not show then
+		self.bar:SetStatusBarTexture("")
+		self.bar.bg:SetTexture("")
+		self.bar.border:Hide()
+	else
+		self:UpdateTexture()
+		self:UpdateBorder()
+	end
+end
+
+function Bar:UpdateBorder()
+    local bar = self.bar
+	if bar then
+	    if ShieldTracker.CustomUI.showBorders ~= nil then
+	        if ShieldTracker.CustomUI.showBorders == true then
+	            bar.border:Show()
+            else
+                bar.border:Hide()
+            end
+        else
+    		if self.db.border then
+    			bar.border:Show()
+    		else
+    			bar.border:Hide()
+    		end
+		end
+
+	    local Tukui = _G.Tukui and ShieldTracker.db.profile.skinning.tukui.enabled
+	    local ElvUI = _G.ElvUI and ShieldTracker.db.profile.skinning.elvui.enabled
+		if Tukui or ElvUI then
+			bar:CreateBackdrop()
+		end
+	end
+end
+
+function Bar:UpdateTexture()
+	if not self.db.shown then
+		return
+	end
+
+	local bt
+    if ShieldTracker.CustomUI.texture then
+        bt = ShieldTracker.CustomUI.texture
+    else
+	    bt = LSM:Fetch("statusbar", self.db.texture)
+    end
+	self.bar:SetStatusBarTexture(bt)
+	self.bar.bg:SetTexture(bt)
+    self.bar:GetStatusBarTexture():SetHorizTile(false)
+    self.bar:GetStatusBarTexture():SetVertTile(false)
+	self:UpdateGraphics()
+end
+
+function Bar:UpdateGraphics()
+    local bc, bgc, tc
+
+	if self.altcolor then
+	    bc = self.db.alt_color
+	    bgc = self.db.alt_bgcolor
+	    tc = self.db.alt_textcolor
+	else
+	    bc = self.db.color
+	    bgc = self.db.bgcolor
+	    tc = self.db.textcolor
+	end
+
+    self.bar:SetStatusBarColor(bc.r, bc.g, bc.b, bc.a)
+    self.bar.bg:SetVertexColor(bgc.r, bgc.g, bgc.b, bgc.a)
+    self.bar.value:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+
+    if self.db.show_time then
+        self.bar.time:Show()
+    else
+        self.bar.time:Hide()
+    end
+    self.bar.time:SetPoint(self.db.time_pos or "RIGHT")
+    self.bar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+end
