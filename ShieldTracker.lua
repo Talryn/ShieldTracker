@@ -1516,24 +1516,28 @@ function ShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 end
 
 local function onUpdateTimer(self, elapsed)
-	if self.active then
-		self.timer = self.timer - elapsed
-		if self.timer < 0 then
-			self.timer = 0
-			self.active = false
-			self:SetScript("OnUpdate", nil)
-			self:Hide()
-		else
-			self:Show()
-			self:SetValue(self.timer)
-			if self.object.db.timeRemaining ~= "None" then
-				self.time:SetText(abs(round(self.timer)))
-				self.time:Show()
+	self.lastUpdate = (self.lastUpdate or 0) + elapsed
+	self.timer = self.timer - elapsed
+	if self.lastUpdate >= 0.1 then
+		self.lastUpdate = 0
+		if self.active then
+			if self.timer < 0 then
+				self.timer = 0
+				self.active = false
+				self:SetScript("OnUpdate", nil)
+				self:Hide()
+			else
+				self:Show()
+				self:SetValue(self.timer)
+				if self.object.db.timeRemaining ~= "None" then
+					self.time:SetText(abs(round(self.timer)))
+					self.time:Show()
+				end
 			end
+		else
+			self:Hide()
+			self.time:Hide()
 		end
-	else
-		self:Hide()
-		self.time:Hide()
 	end
 end
 
