@@ -811,7 +811,7 @@ function ShieldTracker:GetOptionsForBar(name)
 								else
 							        self.bars[bar.name].bar.time:SetPoint(val or "RIGHT")
 							        self.bars[bar.name].bar.time:SetJustifyH(val or "RIGHT")
-							        --self.bars[bar.name].bar.time:Show()
+							        self.bars[bar.name]:CheckTracking()
 								end
 							end,
 			                get = function(info)
@@ -1531,12 +1531,10 @@ local function onUpdateTimer(self, elapsed)
 				self:SetValue(self.timer)
 				if self.object.db.timeRemaining ~= "None" then
 					self.time:SetText(abs(round(self.timer)))
-					self.time:Show()
 				end
 			end
 		else
 			self:Hide()
-			self.time:Hide()
 		end
 	end
 end
@@ -1727,10 +1725,8 @@ function Bar:Initialize()
     bar.time:SetText("0")
 	if self.db.timeRemaining == "None" then
 	    bar.time:SetPoint("RIGHT")
-	    bar.time:Hide()
 	else
 	    bar.time:SetPoint(self.db.timeRemaining or "RIGHT")
-	    bar.time:Show()
 	end
 
     bar:SetMovable()
@@ -1812,7 +1808,13 @@ function Bar:CheckTracking()
 	end
 	if tracked == 1 then
 		self.singleSpell = spell
+		if self.db.timeRemaining == "None" then
+			self.bar.time:Hide()
+		else
+			self.bar.time:Show()
+		end
 	else
+		self.bar.time:Hide()
 		self.singleSpell = nil
 	end
 end
@@ -1830,6 +1832,7 @@ function Bar:Reset()
 	self:UpdateBorder()
 	self:UpdateVisibility()
 	self:UpdateGraphics()
+	self:CheckTracking()
 end
 
 function Bar:Skin()
@@ -1956,10 +1959,8 @@ function Bar:UpdateGraphics()
 
     if self.db.timeRemaining == "None" then
 	    self.bar.time:SetPoint("RIGHT")
-        self.bar.time:Hide()
     else
 		self.bar.time:SetPoint(self.db.timeRemaining or "RIGHT")
-        self.bar.time:Show()
     end
     self.bar.time:SetTextColor(tc.r, tc.g, tc.b, tc.a)
 end
