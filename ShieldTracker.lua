@@ -117,6 +117,27 @@ local function LoadSpellNames()
 end
 LoadSpellNames()
 
+local TipFrame = CreateFrame("GameTooltip", "ShieldTrackerTooltipFrame", UIParent, "GameTooltipTemplate")
+TipFrame:SetOwner(UIParent, "ANCHOR_NONE")
+local function ConcatenateSpellText(spellName, ...)
+	local final = ""
+    for i = 1, select("#", ...) do
+        local region = select(i, ...)
+        if region and region:GetObjectType() == "FontString" then
+            local regionText = region:GetText()
+			if regionText and regionText ~= SpellNames[spellName] then
+				final = final .. regionText .. "\n"
+			end
+		end
+	end
+	return final
+end
+local function GetSpellText(spellName)
+	TipFrame:ClearLines()
+	TipFrame:SetSpellByID(SpellIds[spellName])
+	return ConcatenateSpellText(spellName, TipFrame:GetRegions())
+end
+
 local AbsorbsTracked = {
 	["Priest"] = {
 		["Power Word: Shield"] = true,
@@ -1082,7 +1103,7 @@ function ShieldTracker:GetOptionsForBar(name)
 			barOpts.absorbOpts.args["AT_"..spell] = {
 				order = i,
 				name = SpellNames[spell],
-				desc = SpellNames[spell],
+				desc = GetSpellText(spell),
 				type = "toggle",
 				get = function()
 					return self.db.profile.bars[bar.name].tracking[spell]
