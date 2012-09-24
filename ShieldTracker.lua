@@ -1271,7 +1271,7 @@ function ShieldTracker:GetBarList(barName)
 	bar.barList = bar.barList or {}
 	wipe(bar.barList)
 	for name, obj in pairs(self.bars) do
-		if name ~= bar.name then
+		if name ~= bar.name and not bar.disableAnchor then
 			bar.barList[name] = name
 		end
 	end
@@ -1692,6 +1692,7 @@ function Bar:Create(name, friendlyName, disableAnchor)
 	object.name = name
 	object.friendlyName = friendlyName or name
 	object.anchorTries = 0
+	object.disableAnchor = disableAnchor
 	object.db = ShieldTracker.db.profile.bars[object.name]
 	object.unit = (object.db.unit == "named") and 
 		object.db.unitName or object.db.unit
@@ -1701,9 +1702,6 @@ function Bar:Create(name, friendlyName, disableAnchor)
 	object:Initialize()
 	-- Add the bar to the addon's table of bars
 	ShieldTracker.bars[name] = object
-	--if not disableAnchor then
-	--	FrameNames[object.friendlyName] = object.frameName
-	--end
 	object:UpdatePosition()
 	object:CheckTracking()
 	object:Skin()
