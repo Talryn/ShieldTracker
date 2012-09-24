@@ -164,7 +164,7 @@ local ThousandDelimFmt = '%s%d' .. ThousandsDelim..'%03d'
 
 local function round(number)
     if not number then return 0 end
-    return ceil(number-0.5)
+    return floor(number+0.5)
 end
 
 local function FormatNumberDelimited(number)
@@ -321,6 +321,7 @@ local defaults = {
 				height = 15,
 				scale = 1,
 				anchorFrame = "None",
+				anchorBar = "",
 				anchorFrameCustom = "",
 				anchorFramePt = "BOTTOM",
 				anchorPt = "TOP",
@@ -613,16 +614,6 @@ end
 
 function ShieldTracker:GetBarOptions()
 	local barOpts = {
-	    --order = 1,
-		--name = L["Bars"],
-		--type = "group",
-		--args = {
-		--    description = {
-		--        order = 1,
-		--        type = "description",
-		--        name = L["Bars_Desc"],
-		--    },
-		--},
 		createBar = {
 			order = 2,
 			type = "input",
@@ -678,6 +669,11 @@ end
 function ShieldTracker:RenameBar(old, new)
 	self.db.profile.bars[new] = self.db.profile.bars[old]
 	self.db.profile.bars[old] = nil
+	for name,bar in pairs(self.db.profile.bars) do
+		if bar.anchorBar and bar.anchorBar == old then
+			bar.anchorBar = new
+		end
+	end
 	self.bars[new] = self.bars[old]
 	self.bars[old] = nil
 	self.bars[new].name = new
@@ -717,12 +713,26 @@ function ShieldTracker:GetOptionsForBar(name)
 					type = "execute",
 					name = L["Delete Bar"],
 					desc = L["DeleteBarDesc"],
-					width = double,
+					width = "half",
 					confirm = function()
 						return L["DeleteConfirmMsg"]
 					end,
 					func = function()
 						self:RemoveBar(bar.name)
+					end,
+				},
+				showBar = {
+					order = 3,
+					type = "execute",
+					name = L["Show Bar"],
+					desc = L["ShowBarConfig_Desc"],
+					width = "half",
+					func = function()
+						if self.bars[bar.name].bar:IsShown() then
+							self.bars[bar.name].bar:Hide()
+						else
+							self.bars[bar.name].bar:Show()
+						end
 					end,
 				},
 	            generalOptions = {
@@ -1246,18 +1256,26 @@ function ShieldTracker:GetAnchorList(barName)
 	local bar = self.bars[barName]
 	bar.anchorList = bar.anchorList or {}
 	wipe(bar.anchorList)
-	for name, obj in pairs(self.bars) do
-		if name ~= bar.name then
-			bar.anchorList["ShieldTracker_"..name] = name
-		end
-	end
     bar.anchorList["None"] = L["None"]
     bar.anchorList["Custom"] = L["Custom"]
+    bar.anchorList["Bar"] = L["Bar"]
 	if select(6, GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
 		self.db.profile.bars[bar.name].anchorFrame == "Compact Runes" then
 		bar.anchorList["Compact Runes"] = L["Compact Runes"]
 	end
 	return bar.anchorList
+end
+
+function ShieldTracker:GetBarList(barName)
+	local bar = self.bars[barName]
+	bar.barList = bar.barList or {}
+	wipe(bar.barList)
+	for name, obj in pairs(self.bars) do
+		if name ~= bar.name then
+			bar.barList[name] = name
+		end
+	end
+	return bar.barList
 end
 
 function ShieldTracker:GetAdvancedPositioning(name)
@@ -1272,7 +1290,9 @@ function ShieldTracker:GetAdvancedPositioning(name)
 			name = L["Anchor"],
 			desc = L["Anchor_OptDesc"],
 			type = "select",
-			values = self:GetAnchorList(bar.name),
+			values = function()
+				return self:GetAnchorList(bar.name)
+			end,
 			order = 1010,
 			set = function(info, val)
 			    self.db.profile.bars[bar.name].anchorFrame = val
@@ -1281,6 +1301,25 @@ function ShieldTracker:GetAdvancedPositioning(name)
 	        get = function(info)
 	            return self.db.profile.bars[bar.name].anchorFrame
 	        end,
+		},
+		anchorBar = {
+			name = L["Bar"],
+			desc = L["AnchorBar_OptDesc"],
+			type = "select",
+			values = function()
+				return self:GetBarList(bar.name)
+			end,
+			order = 1015,
+			set = function(info, val)
+			    self.db.profile.bars[bar.name].anchorBar = val
+				bar:UpdatePosition()
+			end,
+	        get = function(info)
+	            return self.db.profile.bars[bar.name].anchorBar
+	        end,
+			disabled = function()
+				return self.db.profile.bars[bar.name].anchorFrame ~= "Bar"
+			end,
 		},
 		anchorFrameCustom = {
 			name = L["Frame"],
@@ -1530,7 +1569,7 @@ local function onUpdateTimer(self, elapsed)
 				self:Show()
 				self:SetValue(self.timer)
 				if self.object.db.timeRemaining ~= "None" then
-					self.time:SetText(abs(round(self.timer)))
+					self.time:SetText(round(self.timer))
 				end
 			end
 		else
@@ -1662,9 +1701,9 @@ function Bar:Create(name, friendlyName, disableAnchor)
 	object:Initialize()
 	-- Add the bar to the addon's table of bars
 	ShieldTracker.bars[name] = object
-	if not disableAnchor then
-		FrameNames[object.friendlyName] = object.bar:GetName()
-	end
+	--if not disableAnchor then
+	--	FrameNames[object.friendlyName] = object.frameName
+	--end
 	object:UpdatePosition()
 	object:CheckTracking()
 	object:Skin()
@@ -1672,7 +1711,8 @@ function Bar:Create(name, friendlyName, disableAnchor)
 end
 
 function Bar:Initialize()
-    local bar = CreateFrame("StatusBar", "ShieldTracker_"..self.name, UIParent)
+	self.frameName = "ShieldTracker_"..self.name
+    local bar = CreateFrame("StatusBar", self.frameName, UIParent)
 	self.bar = bar
 	bar.object = self
 	bar.active = false
@@ -1849,6 +1889,11 @@ function Bar:UpdatePosition()
 	local anchorFrame = FrameNames[self.db.anchorFrame]
 	if not anchorFrame and self.db.anchorFrame == "Custom" then
 		anchorFrame = self.db.anchorFrameCustom
+	elseif self.db.anchorFrame == "Bar" then
+		local bar = ShieldTracker.bars[self.db.anchorBar]
+		if bar then
+			anchorFrame = bar.frameName
+		end
 	end
 
 	self.bar:ClearAllPoints()
