@@ -94,7 +94,9 @@ local SpellIds = {
 	["Incanter's Ward"] = 1463,
 	-- Monk
 	["Life Cocoon"] = 116849,
-	["Guard"] = 118604, -- via the Brewmaster's Black Ox Statue
+	["Guard"] = 115295,
+	["Guard (Glyphed)"] = 123402,
+	["Guard (Black Ox Statue)"] = 118604,
 	-- Warlock
 	["Sacrificial Pact"] = 108416,
 	-- Items
@@ -134,6 +136,8 @@ local AbsorbsTracked = {
 	["Monk"] = {
 		["Life Cocoon"] = true,
 		["Guard"] = true,
+		["Guard (Glyphed)"] = true,
+		["Guard (Black Ox Statue)"] = true,
 	},
 	["Mage"] = {
 		["Ice Barrier"] = true,
