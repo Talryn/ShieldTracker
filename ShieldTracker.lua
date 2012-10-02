@@ -1022,6 +1022,89 @@ function ShieldTracker:GetOptionsForBar(name)
 						},
 					},
 				},
+	            font = {
+	                order = 550,
+	                type = "group",
+					guiInline = true,
+	                name = L["Font"],
+					args = {
+						font_size = {
+							order = 70,
+							name = L["Font size"],
+							desc = L["Font size"],
+							type = "range",
+							min = 8,
+							max = 30,
+							step = 1,
+							set = function(info, val) 
+								self.db.profile.bars[bar.name].font_size = val
+								self.bars[bar.name]:ResetFonts()
+							end,
+							get = function(info,val)
+								return self.db.profile.bars[bar.name].font_size 
+									or self.db.profile.font_size
+							end,
+						},
+						font = {
+							order = 80,
+							type = "select",
+							name = L["Font"],
+							desc = L["Font to use."],
+							values = LSM:HashTable("font"),
+							dialogControl = 'LSM30_Font',
+							get = function()
+								return self.db.profile.bars[bar.name].font_face 
+									or self.db.profile.font_face
+							end,
+							set = function(info, val) 
+							    self.db.profile.bars[bar.name].font_face = val
+								self.bars[bar.name]:ResetFonts()
+							end
+						},
+						font_outline = {
+							name = L["Outline"],
+							desc = L["FontOutline_OptionDesc"],
+							type = "toggle",
+							order = 90,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].font_outline = val
+								self.bars[bar.name]:ResetFonts()
+							end,
+				            get = function(info)
+				                return self.db.profile.bars[bar.name].font_outline
+									or self.db.profile.font_outline
+				            end,
+						},
+						font_monochrome = {
+							name = L["Monochrome"],
+							desc = L["FontMonochrome_OptionDesc"],
+							type = "toggle",
+							order = 100,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].font_monochrome = val
+								self.bars[bar.name]:ResetFonts()
+							end,
+				            get = function(info)
+				                return self.db.profile.bars[bar.name].font_monochrome
+									or self.db.profile.font_monochrome
+				            end,
+						},
+						font_thickoutline = {
+							name = L["Thick Outline"],
+							desc = L["FontThickOutline_OptionDesc"],
+							type = "toggle",
+							order = 110,
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].font_thickoutline = val
+								self.bars[bar.name]:ResetFonts()
+							end,
+				            get = function(info)
+				                return self.db.profile.bars[bar.name].font_thickoutline
+									or self.db.profile.font_thickoutline
+				            end,
+						},
+					},
+				},
 	            appearance = {
 	                order = 600,
 	                type = "group",
@@ -1536,19 +1619,21 @@ function ShieldTracker:Reset()
 	end
 end
 
-function ShieldTracker:GetFontSettings()
+function ShieldTracker:GetFontSettings(name)
 	local ff, fh, fontFlags
+	local profile = self.db.profile
+	local bar = self.bars[name]
 
     -- If a custom font is set, then override the settings
     if self.CustomUI.font then
         ff = self.CustomUI.font
     else
-	    ff = LSM:Fetch("font", self.db.profile.font_face)
+	    ff = LSM:Fetch("font", bar and bar.db.font_face or profile.font_face)
     end
-    if self.CustomUI.fontSize then
+    if self.CustomUI.fontSize and not (bar and bar.db.font_size) then
         fh = self.CustomUI.fontSize
     else
-        fh = self.db.profile.font_size
+        fh = bar and bar.db.font_size or profile.font_size
     end
     if self.CustomUI.fontFlags then
         fontFlags = self.CustomUI.fontFlags
@@ -1559,15 +1644,18 @@ function ShieldTracker:GetFontSettings()
 	return ff, fh, fontFlags
 end
 
-function ShieldTracker:GetFontFlags()
+function ShieldTracker:GetFontFlags(name)
     local flags = {}
-    if self.db.profile.font_outline then
+	local profile = self.db.profile
+	local bar = self.bars[name]
+
+    if bar and bar.db.font_outline or profile.font_outline then
         tinsert(flags, "OUTLINE")
     end
-    if self.db.profile.font_monochrome then
+    if bar and bar.db.font_monochrome or profile.font_monochrome then
         tinsert(flags, "MONOCHROME")
     end
-    if self.db.profile.font_thickoutline then
+    if bar and bar.db.font_thickoutline or profile.font_thickoutline then
         tinsert(flags, "THICKOUTLINE")
     end
     return tconcat(flags, ",")
@@ -1718,7 +1806,8 @@ function Bar:Create(name, friendlyName, disableAnchor)
 	object.friendlyName = friendlyName or name
 	object.anchorTries = 0
 	object.disableAnchor = disableAnchor
-	object.db = ShieldTracker.db.profile.bars[object.name]
+	local profile = ShieldTracker.db.profile
+	object.db = profile.bars[object.name]
 	object.unit = (object.db.unit == "named") and 
 		object.db.unitName or object.db.unit
 	ShieldTracker.watchedUnits[object.unit] = 
@@ -1769,7 +1858,7 @@ function Bar:Initialize()
 	if not self.db.border or ShieldTracker.CustomUI.showBorders == false then
 		bar.border:Hide()
 	end
-	local ff, fh, fontFlags = ShieldTracker:GetFontSettings()
+	local ff, fh, fontFlags = ShieldTracker:GetFontSettings(self.name)
     bar.value = bar:CreateFontString(nil, "OVERLAY")
     bar.value:SetPoint("CENTER")
     bar.value:SetFont(ff, fh, fontFlags)
@@ -1946,7 +2035,7 @@ function Bar:UpdatePosition()
 end
 
 function Bar:ResetFonts()
-	local ff, fh, fontFlags = ShieldTracker:GetFontSettings()
+	local ff, fh, fontFlags = ShieldTracker:GetFontSettings(self.name)
 	self.bar.value:SetFont(ff, fh, fontFlags)						
 	self.bar.value:SetText(self.bar.value:GetText())
 	self.bar.time:SetFont(ff, fh, fontFlags)
