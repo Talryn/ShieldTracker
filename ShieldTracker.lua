@@ -145,6 +145,7 @@ local AbsorbsTracked = {
 		["Divine Aegis"] = true,
 		["Spirit Shell"] = true,
 		["Angelic Bulwark"] = true,
+		["Power Word: Shield (Divine Insight)"] = true,
 	},
 	["Paladin"] = {
 		["Illuminated Healing"] = true,
