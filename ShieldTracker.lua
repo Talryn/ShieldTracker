@@ -77,6 +77,7 @@ LoadItemNames()
 local SpellIds = {
 	-- Priest
 	["Power Word: Shield"] = 17,
+	["Power Word: Shield (Divine Insight)"] = 123258,
 	["Divine Aegis"] = 47753,
 	["Spirit Shell"] = 114908,
 	["Angelic Bulwark"] = 114214,
