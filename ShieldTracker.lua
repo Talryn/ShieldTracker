@@ -1815,9 +1815,9 @@ function Bar:Create(name, friendlyName, disableAnchor)
 	ShieldTracker.watchedUnits[object.unit] = 
 		(ShieldTracker.watchedUnits[object.unit] or 0) + 1
 	object.singleSpell = nil
-	object:Initialize()
 	-- Add the bar to the addon's table of bars
 	ShieldTracker.bars[name] = object
+	object:Initialize()
 	object:UpdatePosition()
 	object:CheckTracking()
 	object:Skin()
