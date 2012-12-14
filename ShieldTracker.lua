@@ -100,6 +100,8 @@ local SpellIds = {
 	["Guard (Black Ox Statue)"] = 118604,
 	-- Warlock
 	["Sacrificial Pact"] = 108416,
+	["Twilight Ward"] = 6229,
+	["Fury Ward"] = 119839,
 	-- Items
 	["Indomitable"] = 108008,
 }
@@ -168,6 +170,8 @@ local AbsorbsTracked = {
 	},
 	["Warlock"] = {
 		["Sacrificial Pact"] = true,
+		["Twilight Ward"] = true,
+		["Fury Ward"] = true,
 	},
 	["Warrior"] = {
 		["Shield Barrier"] = true,
