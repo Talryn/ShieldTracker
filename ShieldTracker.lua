@@ -1705,7 +1705,7 @@ function ShieldTracker:CheckAuras(unit)
 
     local name, rank, icon, count, dispelType, duration, expires,
         caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
-		value, value2, value3
+		castByPlayer, value, value2, value3
 
 	local shields = ShieldsFound
 	wipe(shields)
@@ -1714,7 +1714,7 @@ function ShieldTracker:CheckAuras(unit)
     repeat
         name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
             consolidate, spellId, canApplyAura, isBossDebuff, 
-			_, value, value2, value3 = UnitAura(unit, i)
+			castByPlayer, value, value2, value3 = UnitAura(unit, i)
         if name == nil or spellId == nil then break end
 
 		local lookup = SpellIdsRev[spellId]
@@ -1742,8 +1742,9 @@ function ShieldTracker:CheckAuras(unit)
 					if bar.singleSpell then
 				        name, rank, icon, count, dispelType, duration, 
 						expires, caster, stealable, consolidate, spellId, 
-						canApplyAura, isBossDebuff, _, value, value2, 
-						value3 = UnitAura(unit, SpellNames[bar.singleSpell])
+						canApplyAura, isBossDebuff, castByPlayer, 
+						value, value2, value3 
+						= UnitAura(unit, SpellNames[bar.singleSpell])
 						if name then
 							bar.bar.active = true
 							bar.bar.timer = expires - GetTime()
