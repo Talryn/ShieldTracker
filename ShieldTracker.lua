@@ -32,7 +32,16 @@ local Bar = {}
 local tinsert, tremove, tgetn = table.insert, table.remove, table.getn
 local tconcat = table.concat
 local floor, ceil, abs = math.floor, math.ceil, math.abs
-local rawget = rawget
+local rawget = _G.rawget
+local wipe = _G.wipe
+local tostring, tonumber = _G.tostring, _G.tonumber
+local type, unpack = _G.type, _G.unpack
+
+-- Local for Wow APIs
+local UnitAura = _G.UnitAura
+local GetTime = _G.GetTime
+local UnitExists = _G.UnitExists
+local GetUnitName = _G.GetUnitName
 
 ShieldTracker.playerName = UnitName("player")
 ShieldTracker.bars = {}
@@ -68,7 +77,7 @@ setmetatable(ItemNames, LookupOrKeyMT)
 local function LoadItemNames()
 	for k,v in pairs(ItemIds) do
 		if not ItemNames[k] then
-			ItemNames[k] = (GetItemInfo(ItemIds[k]))
+			ItemNames[k] = (_G.GetItemInfo(ItemIds[k]))
 		end
 	end
 end
@@ -114,14 +123,14 @@ setmetatable(SpellNames, LookupOrKeyMT)
 local function LoadSpellNames()
 	for k,v in pairs(SpellIds) do
 		if rawget(SpellNames, k) == nil then
-			SpellNames[k] = GetSpellInfo(v)
+			SpellNames[k] = _G.GetSpellInfo(v)
 		end
 	end
 end
 LoadSpellNames()
 
-local TipFrame = CreateFrame("GameTooltip", "ShieldTrackerTooltipFrame", UIParent, "GameTooltipTemplate")
-TipFrame:SetOwner(UIParent, "ANCHOR_NONE")
+local TipFrame = _G.CreateFrame("GameTooltip", "ShieldTrackerTooltipFrame", _G.UIParent, "GameTooltipTemplate")
+TipFrame:SetOwner(_G.UIParent, "ANCHOR_NONE")
 local function ConcatenateSpellText(spellName, ...)
 	local final = ""
     for i = 1, select("#", ...) do
@@ -250,25 +259,25 @@ function ShieldTracker:SetNumberFormat(format)
 	end
 end
 
-local Broker = CreateFrame("Frame")
-Broker.obj = LDB:NewDataObject(GetAddOnMetadata(ADDON_NAME, "Title"), {
+local Broker = _G.CreateFrame("Frame")
+Broker.obj = LDB:NewDataObject(_G.GetAddOnMetadata(ADDON_NAME, "Title"), {
     type = "data source",
     icon = "Interface\\Icons\\inv_shield_07",
-    label = GetAddOnMetadata(ADDON_NAME, "Title"),
-    text = GetAddOnMetadata(ADDON_NAME, "Title"),
+    label = _G.GetAddOnMetadata(ADDON_NAME, "Title"),
+    text = _G.GetAddOnMetadata(ADDON_NAME, "Title"),
     barValue = 0,
     barR = 0,
     barG = 0,
     barB = 1,
 	OnClick = function(clickedframe, button)
 		if button == "RightButton" then
-			local optionsFrame = InterfaceOptionsFrame
+			local optionsFrame = _G.InterfaceOptionsFrame
 			if optionsFrame:IsVisible() then
 				optionsFrame:Hide()
 			else
 				ShieldTracker:ShowOptions()
 			end
-		elseif button == "LeftButton" and IsShiftKeyDown() then
+		elseif button == "LeftButton" and _G.IsShiftKeyDown() then
         end
 	end
 } )
@@ -285,7 +294,7 @@ function Broker.obj:OnEnter()
 	self.tooltip = tooltip 
 
     tooltip:AddHeader(addonHdr:format(
-		GetAddOnMetadata(ADDON_NAME,"Title"), ADDON_VERSION))
+		_G.GetAddOnMetadata(ADDON_NAME,"Title"), ADDON_VERSION))
     tooltip:AddLine()
 
 	for name, bar in pairs(ShieldTracker.bars) do
@@ -369,7 +378,7 @@ local defaults = {
 }
 
 function ShieldTracker:ShowOptions()
-	InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
+	_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
 end
 
 function ShieldTracker:SetSkin(update)
@@ -433,7 +442,7 @@ function ShieldTracker:GetOptions()
     if not self.options then
         self.options = {
             type = "group",
-            name = GetAddOnMetadata(ADDON_NAME, "Title"),
+            name = _G.GetAddOnMetadata(ADDON_NAME, "Title"),
             args = {
 				description = {
 					order = 1,
@@ -543,9 +552,9 @@ function ShieldTracker:GetGeneralOptions()
 					type = "execute",
 					order = 50,
 					func = function()
-					    configMode = not configMode
+					    self.configMode = not self.configMode
 						for name, bar in pairs(self.bars) do
-							if configMode then
+							if self.configMode then
 								bar.bar:Show()
 							else
 								bar.bar:Hide()
@@ -930,13 +939,13 @@ function ShieldTracker:GetOptionsForBar(name)
 							name = L["X Offset"],
 							desc = L["XOffset_Desc"],	
 							type = "range",
-							softMin = -floor(GetScreenWidth()/2),
-							softMax = floor(GetScreenWidth()/2),
+							softMin = -floor(_G.GetScreenWidth()/2),
+							softMax = floor(_G.GetScreenWidth()/2),
 							bigStep = 1,
 							set = function(info, val)
 							    self.db.profile.bars[bar.name].x = val
 								self.bars[bar.name].bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
+									"CENTER", _G.UIParent, "CENTER", 
 									self.db.profile.bars[bar.name].x, 
 									self.db.profile.bars[bar.name].y)
 							end,
@@ -949,13 +958,13 @@ function ShieldTracker:GetOptionsForBar(name)
 							name = L["Y Offset"],
 							desc = L["YOffset_Desc"],	
 							type = "range",
-							softMin = -floor(GetScreenHeight()/2),
-							softMax = floor(GetScreenHeight()/2),
+							softMin = -floor(_G.GetScreenHeight()/2),
+							softMax = floor(_G.GetScreenHeight()/2),
 							bigStep = 1,
 							set = function(info, val)
 							    self.db.profile.bars[bar.name].y = val
 								self.bars[bar.name].bar:SetPoint(
-									"CENTER", UIParent, "CENTER", 
+									"CENTER", _G.UIParent, "CENTER", 
 									self.db.profile.bars[bar.name].x, 
 									self.db.profile.bars[bar.name].y)
 							end,
@@ -1373,7 +1382,7 @@ function ShieldTracker:GetAnchorList(barName)
     bar.anchorList["None"] = L["None"]
     bar.anchorList["Custom"] = L["Custom"]
     bar.anchorList["Bar"] = L["Bar"]
-	if select(6, GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
+	if select(6, _G.GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
 		self.db.profile.bars[bar.name].anchorFrame == "Compact Runes" then
 		bar.anchorList["Compact Runes"] = L["Compact Runes"]
 	end
@@ -1501,8 +1510,8 @@ function ShieldTracker:GetAdvancedPositioning(name)
 			name = L["X Offset"],
 			desc = L["XOffsetAnchor_Desc"],	
 			type = "range",
-			softMin = -floor(GetScreenWidth()),
-			softMax = floor(GetScreenWidth()),
+			softMin = -floor(_G.GetScreenWidth()),
+			softMax = floor(_G.GetScreenWidth()),
 			bigStep = 1,
 			set = function(info, val)
 			    self.db.profile.bars[bar.name].anchorX = val
@@ -1520,8 +1529,8 @@ function ShieldTracker:GetAdvancedPositioning(name)
 			name = L["Y Offset"],
 			desc = L["YOffsetAnchor_Desc"],	
 			type = "range",
-			softMin = -floor(GetScreenHeight()),
-			softMax = floor(GetScreenHeight()),
+			softMin = -floor(_G.GetScreenHeight()),
+			softMax = floor(_G.GetScreenHeight()),
 			bigStep = 1,
 			set = function(info, val)
 			    self.db.profile.bars[bar.name].anchorY = val
@@ -1576,7 +1585,7 @@ function ShieldTracker:OnEnable()
 	LoadSpellNames()
 
 	if not self.optionsFrame then
-	    local displayName = GetAddOnMetadata(ADDON_NAME, "Title")
+	    local displayName = _G.GetAddOnMetadata(ADDON_NAME, "Title")
 		local options = self:GetOptions()
 	    LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(displayName, options)
 
@@ -1710,7 +1719,7 @@ function ShieldTracker:CheckAuras(unit)
 	local shields = ShieldsFound
 	wipe(shields)
 
-    i = 1
+    local i = 1
     repeat
         name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
             consolidate, spellId, canApplyAura, isBossDebuff, 
@@ -1795,7 +1804,7 @@ local FrameNames = {
 
 local function IsFrame(frame)
 	if frame and type(frame) == "string" then
-		local f = GetClickFrame(frame)
+		local f = _G.GetClickFrame(frame)
 		if f and type(f) == "table" and f.SetPoint and f.GetName then
 			return true
 		end
@@ -1808,7 +1817,7 @@ Bar.__index = Bar
 
 function Bar:Create(name, friendlyName, disableAnchor)
 	if ShieldTracker.bars[name] then return end
-    local object = setmetatable({}, Bar)
+    local object = _G.setmetatable({}, Bar)
 	object.name = name
 	object.friendlyName = friendlyName or name
 	object.anchorTries = 0
@@ -1831,12 +1840,12 @@ end
 
 function Bar:Initialize()
 	self.frameName = "ShieldTracker_"..self.name
-    local bar = CreateFrame("StatusBar", self.frameName, UIParent)
+    local bar = _G.CreateFrame("StatusBar", self.frameName, _G.UIParent)
 	self.bar = bar
 	bar.object = self
 	bar.active = false
 	bar.timer = 0
-    --bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
+    --bar:SetPoint("CENTER", _G.UIParent, "CENTER", self.db.x, self.db.y)
 	bar:SetScale(self.db.scale)
     bar:SetOrientation("HORIZONTAL")
     bar:SetWidth(self.db.width)
@@ -1899,11 +1908,11 @@ function Bar:Initialize()
     bar:SetScript("OnDragStop",
         function(self)
             self:StopMovingOrSizing()
-			local scale = self:GetEffectiveScale() / UIParent:GetEffectiveScale()
+			local scale = self:GetEffectiveScale() / _G.UIParent:GetEffectiveScale()
 			local x, y = self:GetCenter()
 			x, y = x * scale, y * scale
-			x = x - GetScreenWidth()/2
-			y = y - GetScreenHeight()/2
+			x = x - _G.GetScreenWidth()/2
+			y = y - _G.GetScreenHeight()/2
 			x = x / self:GetScale()
 			y = y / self:GetScale()
 			self.object.db.x, self.object.db.y = x, y
@@ -2028,7 +2037,7 @@ function Bar:UpdatePosition()
 			self.db.anchorX, self.db.anchorY)
 		self.anchorTries = 0
 	else
-		self.bar:SetPoint("CENTER", UIParent, "CENTER", self.db.x, self.db.y)
+		self.bar:SetPoint("CENTER", _G.UIParent, "CENTER", self.db.x, self.db.y)
 		if anchorFrame and not isFrame and self.anchorTries < 13 then
 			if ST.db.profile.debug then
 				ST:Print("Waiting for anchor for bar '"..tostring(self.name).."'.")
