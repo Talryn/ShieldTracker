@@ -1192,6 +1192,7 @@ function ShieldTracker:GetOptionsForBar(name)
 					order = 1,
 					set = function(info, val)
 					    self.db.profile.bars[bar.name].tracked = val
+						self.bars[bar.name]:CheckTracking()
 					end,
 	                get = function(info)
 	                    return self.db.profile.bars[bar.name].tracked
