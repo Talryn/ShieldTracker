@@ -371,6 +371,7 @@ local defaults = {
 				timeRemaining = "None",
 				unit = "player",
 				unitName = "",
+				tracked = "Selected",
 				tracking = {},
 			},
 		},
@@ -1178,7 +1179,25 @@ function ShieldTracker:GetOptionsForBar(name)
 			order = 220,
 			type = "group",
 			name = L["Absorbs Tracked"],
-			args = {},
+			args = {
+				absorbsTracked = {
+					name = L["Absorbs Tracked"],
+					desc = L["AbsorbsTracked_OptionDesc"],
+					type = "select",
+					values = {
+					    ["All"] = L["All"],
+					    ["Selected"] = L["Selected"],
+					    ["Excluding"] = L["All Minus Selected"],
+					},
+					order = 1,
+					set = function(info, val)
+					    self.db.profile.bars[bar.name].tracked = val
+					end,
+	                get = function(info)
+	                    return self.db.profile.bars[bar.name].tracked
+	                end,
+				},
+			},
 		},
 		anchorOpts = {
 			order = 230,
@@ -1210,6 +1229,9 @@ function ShieldTracker:GetOptionsForBar(name)
 			        self.db.profile.bars[bar.name].tracking[spell] = val
 					self.bars[bar.name]:CheckTracking()
 			    end,
+				disabled = function()
+					return self.db.profile.bars[bar.name].tracked == "All"
+				end,
 			}
 			i = i + 1
 		end
@@ -1738,13 +1760,22 @@ function ShieldTracker:CheckAuras(unit)
 		if bar.db.enabled and (bar.unit == unit or 
 			(bar.unit == unitName)) then
 
+			local totalValue = 0
 			if UnitExists(unit) or UnitExists(unitName) then
-				local totalValue = 0
-				for k, v in pairs(bar.db.tracking) do
-					if k and v then
-						totalValue = totalValue + (shields[k] or 0)
+				if bar.db.tracked == "All" then
+					totalValue = _G.UnitGetTotalAbsorbs(bar.unit) or 0
+				else
+					for k, v in pairs(bar.db.tracking) do
+						if k and v then
+							totalValue = totalValue + (shields[k] or 0)
+						end
+					end
+					if bar.db.tracked == "Excluding" then
+						totalValue = (_G.UnitGetTotalAbsorbs(bar.unit) or 0) 
+							- totalValue
 					end
 				end
+
 				if totalValue > 0 then
 					bar:SetValue(totalValue)
 					bar.bar:Show()
@@ -1968,13 +1999,16 @@ end
 
 function Bar:CheckTracking()
 	local tracked, spell = 0, nil
-	for k, v in pairs(self.db.tracking) do
-		if k and v then
-			tracked = tracked + 1
-			spell = k
+	if self.db.tracked == "Selected" then
+		for k, v in pairs(self.db.tracking) do
+			if k and v then
+				tracked = tracked + 1
+				spell = k
+			end
 		end
 	end
-	if tracked == 1 then
+
+	if self.db.tracked == "Selected" and tracked == 1 then
 		self.singleSpell = spell
 		if self.db.timeRemaining == "None" then
 			self.bar.time:Hide()
