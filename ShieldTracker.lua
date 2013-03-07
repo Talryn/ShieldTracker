@@ -111,6 +111,7 @@ local SpellIds = {
 	["Sacrificial Pact"] = 108416,
 	["Twilight Ward"] = 6229,
 	["Fury Ward"] = 119839,
+	["Soul Leech"] = 108366,
 	-- Items
 	["Indomitable"] = 108008,
 }
@@ -181,6 +182,7 @@ local AbsorbsTracked = {
 		["Sacrificial Pact"] = true,
 		["Twilight Ward"] = true,
 		["Fury Ward"] = true,
+		["Soul Leech"] = true,
 	},
 	["Warrior"] = {
 		["Shield Barrier"] = true,
