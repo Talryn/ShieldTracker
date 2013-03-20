@@ -46,6 +46,9 @@ local GetUnitName = _G.GetUnitName
 ShieldTracker.playerName = UnitName("player")
 ShieldTracker.bars = {}
 ShieldTracker.options = nil
+ShieldTracker.watchingMouseover = false
+ShieldTracker.mouseover = nil
+ShieldTracker.mouseoverBars = {}
 ShieldTracker.watchedUnits = {}
 -- Settings to allow custom fonts and textures which override the
 -- user set options.
@@ -1733,7 +1736,8 @@ end
 
 function ShieldTracker:CheckAuras(unit)
 	local unitName = GetUnitName(unit, true)
-	if not self.watchedUnits[unit] and not self.watchedUnits[unitName] then
+	if not self.watchedUnits[unit] and not self.watchedUnits[unitName] and
+		not (self.watchingMouseover and self.mouseover == unitName) then
 		return
 	end
 
@@ -1761,7 +1765,8 @@ function ShieldTracker:CheckAuras(unit)
 
 	for barName, bar in pairs(self.bars) do
 		if bar.db.enabled and (bar.unit == unit or 
-			(bar.unit == unitName)) then
+			(bar.unit == unitName) or 
+			(bar.unit == "mouseover" and unitName == self.mouseover)) then
 
 			local totalValue = 0
 			if UnitExists(unit) or UnitExists(unitName) then
@@ -1828,6 +1833,38 @@ function ShieldTracker:PLAYER_FOCUS_CHANGED(event, unit)
 	self:CheckAuras("focus")
 end
 
+function ShieldTracker:UPDATE_MOUSEOVER_UNIT(event, unit)
+	self.mouseover = GetUnitName("mouseover", true)
+	if self.mouseover then
+		self:CheckAuras("mouseover")
+	else
+		for k, v in pairs(self.mouseoverBars) do
+			if k then
+				k.bar:SetScript("OnUpdate", nil)
+				k.bar:Hide()
+			end
+		end
+	end
+end
+
+function ShieldTracker:CheckMouseover()
+	self.watchingMouseover = 
+		(self.watchedUnits["mouseover"] or 0) > 0 and true or false
+
+	wipe(self.mouseoverBars)
+	for k, v in pairs(self.bars) do
+		if v and v.unit == "mouseover" then
+			self.mouseoverBars[v] = true
+		end
+	end
+
+	if self.watchingMouseover then
+		self:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
+	else
+		self:UnregisterEvent("UPDATE_MOUSEOVER_UNIT")
+	end
+end
+
 function ShieldTracker:UNIT_AURA(event, unit)
 	self:CheckAuras(unit)
 end
@@ -1863,6 +1900,7 @@ function Bar:Create(name, friendlyName, disableAnchor)
 	ShieldTracker.watchedUnits[object.unit] = 
 		(ShieldTracker.watchedUnits[object.unit] or 0) + 1
 	object.singleSpell = nil
+	ShieldTracker:CheckMouseover()
 	-- Add the bar to the addon's table of bars
 	ShieldTracker.bars[name] = object
 	object:Initialize()
@@ -1981,6 +2019,7 @@ function Bar:Remove()
 		(ShieldTracker.watchedUnits[self.unit] or 0) + 1
 	ShieldTracker.db.profile.bars[self.name] = nil
 	ShieldTracker.bars[self.name] = nil
+	ShieldTracker:CheckMouseover()
 	self.bar:Hide()
 end
 
@@ -1998,6 +2037,7 @@ function Bar:UpdateUnit()
 		ShieldTracker.watchedUnits[newUnit] = 
 			(ShieldTracker.watchedUnits[newUnit] or 0) + 1
 	end
+	ShieldTracker:CheckMouseover()
 end
 
 function Bar:CheckTracking()
