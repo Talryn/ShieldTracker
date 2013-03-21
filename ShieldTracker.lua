@@ -1841,6 +1841,7 @@ function ShieldTracker:UPDATE_MOUSEOVER_UNIT(event, unit)
 		for k, v in pairs(self.mouseoverBars) do
 			if k then
 				k.bar:SetScript("OnUpdate", nil)
+				k.bar.active = false
 				k.bar:Hide()
 			end
 		end
