@@ -117,6 +117,8 @@ local SpellIds = {
 	["Soul Leech"] = 108366,
 	-- Items
 	["Indomitable"] = 108008,
+	-- Miscellaneous
+	["Crystal Shell"] = 137633,
 }
 local SpellIdsRev = {}
 for k,v in pairs(SpellIds) do
@@ -192,6 +194,9 @@ local AbsorbsTracked = {
 	},
 	["Items"] = {
 		["Indomitable"] = true,
+	},
+	["Miscellaneous"] = {
+		["Crystal Shell"] = true,
 	},
 }
 
@@ -1704,8 +1709,6 @@ function ShieldTracker:GetFontFlags(name)
     return tconcat(flags, ",")
 end
 
-local ShieldsFound = {}
-
 function ShieldTracker:LibSharedMedia_Registered(event, mediatype, key)
 	self:Reset()
 end
@@ -1733,6 +1736,10 @@ local function onUpdateTimer(self, elapsed)
 		end
 	end
 end
+
+local ShieldsFound = {}
+local ExpiresFound = {}
+local DurationFound = {}
 
 function ShieldTracker:CheckAuras(unit)
 	local unitName = GetUnitName(unit, true)
