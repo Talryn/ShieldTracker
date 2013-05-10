@@ -100,6 +100,7 @@ local SpellIds = {
 	["Blood Shield"] = 77535,
 	["Death Barrier"] = 115635,
 	["Anti-Magic Shell"] = 48707,
+	["Shroud of Purgatory"] = 116888,
 	-- Warrior
 	["Shield Barrier"] = 112048,
 	-- Mage
@@ -118,7 +119,7 @@ local SpellIds = {
 	-- Items
 	["Indomitable"] = 108008,
 	-- Miscellaneous
-	["Crystal Shell"] = 137633,
+	["Crystal Shell"] = 137633,  -- Heroic Tortos
 }
 local SpellIdsRev = {}
 for k,v in pairs(SpellIds) do
@@ -156,6 +157,17 @@ local function GetSpellText(spellName)
 	return ConcatenateSpellText(spellName, TipFrame:GetRegions())
 end
 
+local AbsorbsTrackedOrder = {
+	"Death Knight",
+	"Mage",
+	"Monk",
+	"Paladin",
+	"Priest",
+	"Warlock",
+	"Warrior",
+	"Items",
+	"Special Debuffs",
+}
 local AbsorbsTracked = {
 	["Priest"] = {
 		["Power Word: Shield"] = true,
@@ -195,8 +207,9 @@ local AbsorbsTracked = {
 	["Items"] = {
 		["Indomitable"] = true,
 	},
-	["Miscellaneous"] = {
+	["Special Debuffs"] = {
 		["Crystal Shell"] = true,
+		["Shroud of Purgatory"] = true,
 	},
 }
 
@@ -1219,7 +1232,7 @@ function ShieldTracker:GetOptionsForBar(name)
 	}
 
 	local i = 810
-	for category, spells in pairs(AbsorbsTracked) do
+	for j, category in ipairs(AbsorbsTrackedOrder) do
 		barOpts.absorbOpts.args["ATC_"..category] = {
 			order = i,
             type = "header",
@@ -1227,7 +1240,7 @@ function ShieldTracker:GetOptionsForBar(name)
 		}
 		i = i + 1
 		
-		for spell, enabled in pairs(spells) do
+		for spell, enabled in pairs(AbsorbsTracked[category]) do
 			barOpts.absorbOpts.args["AT_"..spell] = {
 				order = i,
 				name = SpellNames[spell],
@@ -1761,12 +1774,23 @@ function ShieldTracker:CheckAuras(unit)
             consolidate, spellId, canApplyAura, isBossDebuff, 
 			castByPlayer, value, value2, value3 = UnitAura(unit, i)
         if name == nil or spellId == nil then break end
-
 		local lookup = SpellIdsRev[spellId]
 		if lookup then
 			shields[lookup] = (shields[lookup] or 0) + value
 		end
+        i = i + 1
+    until name == nil
 
+    i = 1
+    repeat
+        name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+            consolidate, spellId, canApplyAura, isBossDebuff, 
+			castByPlayer, value, value2, value3 = UnitDebuff(unit, i)
+        if name == nil or spellId == nil then break end
+		local lookup = SpellIdsRev[spellId]
+		if lookup then
+			shields[lookup] = (shields[lookup] or 0) + value
+		end
         i = i + 1
     until name == nil
 
@@ -1800,6 +1824,13 @@ function ShieldTracker:CheckAuras(unit)
 						canApplyAura, isBossDebuff, castByPlayer, 
 						value, value2, value3 
 						= UnitAura(unit, SpellNames[bar.singleSpell])
+						if not name then
+					        name, rank, icon, count, dispelType, duration, 
+							expires, caster, stealable, consolidate, spellId, 
+							canApplyAura, isBossDebuff, castByPlayer, 
+							value, value2, value3 
+							= UnitDebuff(unit, SpellNames[bar.singleSpell])
+						end
 						if name then
 							bar.bar.active = true
 							bar.bar.timer = expires - GetTime()
