@@ -39,6 +39,7 @@ local type, unpack = _G.type, _G.unpack
 
 -- Local for Wow APIs
 local UnitAura = _G.UnitAura
+local UnitDebuff = _G.UnitDebuff
 local GetTime = _G.GetTime
 local UnitExists = _G.UnitExists
 local GetUnitName = _G.GetUnitName
