@@ -51,6 +51,8 @@ ShieldTracker.watchingMouseover = false
 ShieldTracker.mouseover = nil
 ShieldTracker.mouseoverBars = {}
 ShieldTracker.watchedUnits = {}
+ShieldTracker.watchedGroupUnits = {}
+ShieldTracker.currentRoster = {}
 -- Settings to allow custom fonts and textures which override the
 -- user set options.
 ShieldTracker.CustomUI = {
@@ -312,7 +314,8 @@ local YELLOW = "|cffffff00"
 local BLUE = "|cff0198e1"
 local ORANGE = "|cffff9933"
 local addonHdr = BLUE.."%s %s"
-
+local barInfoFmt1 = "%s%s"
+local barInfoFmt2 = "%s%s"
 function Broker.obj:OnEnter()
 	local tooltip = LibQTip:Acquire("ShieldTrackerTooltip", 2, "LEFT", "RIGHT")
 	self.tooltip = tooltip 
@@ -320,10 +323,13 @@ function Broker.obj:OnEnter()
     tooltip:AddHeader(addonHdr:format(
 		_G.GetAddOnMetadata(ADDON_NAME,"Title"), ADDON_VERSION))
     tooltip:AddLine()
+	tooltip:AddLine("Bar Name", "Unit")
+	tooltip:AddSeparator(1)
 
 	for name, bar in pairs(ShieldTracker.bars) do
 		local color = bar.db.enabled and GREEN or RED
-		tooltip:AddLine(color .. tostring(bar.name))
+		tooltip:AddLine(barInfoFmt1:format(color, tostring(bar.name)),
+			 barInfoFmt2:format(ORANGE, bar.unit or ""))
 	end
 
 	tooltip:SmartAnchorTo(self)
@@ -395,6 +401,8 @@ local defaults = {
 				timeRemaining = "None",
 				unit = "player",
 				unitName = "",
+				unitSubgroup = 1,
+				unitIndex = 1,
 				tracked = "Selected",
 				tracking = {},
 			},
@@ -844,6 +852,7 @@ function ShieldTracker:GetOptionsForBar(name)
 							    ["named"] = L["Named"],
 							    ["pet"] = L["Pet"],
 							    ["mouseover"] = L["Mouseover"],
+								["group"] = L["Group"],
 							},
 							set = function(info, val)
 							    self.db.profile.bars[bar.name].unit = val
@@ -867,6 +876,57 @@ function ShieldTracker:GetOptionsForBar(name)
 							end,
 							disabled = function()
 								return self.db.profile.bars[bar.name].unit ~= "named"
+							end,
+						},
+						unitSubgroup = {
+							name = L["Subgroup"],
+							desc = L["SubgroupDesc"],
+							order = 41,
+							type = "select",
+							width = "half",
+							values = {
+								[1] = "1",
+								[2] = "2",
+								[3] = "3",
+								[4] = "4",
+								[5] = "5",
+								[6] = "6",
+								[7] = "7",
+								[8] = "8",
+							},
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].unitSubgroup = val
+								self.bars[bar.name]:UpdateUnit()
+							end,
+			                get = function(info)
+								return self.db.profile.bars[bar.name].unitSubgroup
+							end,
+							disabled = function()
+								return self.db.profile.bars[bar.name].unit ~= "group"
+							end,
+						},
+						unitIndex = {
+							name = L["Index"],
+							desc = L["IndexDesc"],
+							order = 42,
+							type = "select",
+							width = "half",
+							values = {
+								[1] = "1",
+								[2] = "2",
+								[3] = "3",
+								[4] = "4",
+								[5] = "5",
+							},
+							set = function(info, val)
+							    self.db.profile.bars[bar.name].unitIndex = val
+								self.bars[bar.name]:UpdateUnit()
+							end,
+			                get = function(info)
+								return self.db.profile.bars[bar.name].unitIndex
+							end,
+							disabled = function()
+								return self.db.profile.bars[bar.name].unit ~= "group"
 							end,
 						},
 						timeRemaining = {
@@ -1594,9 +1654,29 @@ function ShieldTracker:GetAdvancedPositioning(name)
 	return options
 end
 
+local function splitWords(str)
+  local w = {}
+  local function helper(word) table.insert(w, word) return nil end
+  str:gsub("(%w+)", helper)
+  return w
+end
+
 function ShieldTracker:ChatCommand(input)
     if not input or input:trim() == "" then
         self:ShowOptions()
+    else
+		local cmds = splitWords(input)
+        if cmds[1] and cmds[1] == "debug" then
+			if cmds[2] and cmds[2] == "on" then
+				self.db.profile.debug = true
+	            self:Print("Debugging on.  Use '/stracker debug off' to disable.")
+		    elseif cmds[2] and cmds[2] == "off" then
+				self.db.profile.debug = false
+	            self:Print("Debugging off.")
+			else
+				self:Print("Debugging is "..(self.db.profile.debug and "on." or "off."))
+			end
+		end
 	end
 end
 
@@ -1657,6 +1737,7 @@ local WatchedEvents = {
 	"PLAYER_TARGET_CHANGED",
 	"UNIT_AURA",
 	"PLAYER_FOCUS_CHANGED",
+	"GROUP_ROSTER_UPDATE",
 }
 function ShieldTracker:Load()
 	for i = 1, #WatchedEvents do
@@ -1758,6 +1839,7 @@ local DurationFound = {}
 function ShieldTracker:CheckAuras(unit)
 	local unitName = GetUnitName(unit, true)
 	if not self.watchedUnits[unit] and not self.watchedUnits[unitName] and
+		not self.watchedGroupUnits[unitName] and
 		not (self.watchingMouseover and self.mouseover == unitName) then
 		return
 	end
@@ -1872,6 +1954,44 @@ function ShieldTracker:PLAYER_FOCUS_CHANGED(event, unit)
 	self:CheckAuras("focus")
 end
 
+function ShieldTracker:GROUP_ROSTER_UPDATE(event)
+	for i, v in ipairs(self.currentRoster) do
+		wipe(v)
+	end
+	local group = 0
+	local unit = 0
+	for i = 1, _G.GetNumGroupMembers() do
+		local name, rank, subgroup = _G.GetRaidRosterInfo(i)
+		if group ~= subgroup then
+			group = subgroup
+			unit = 1
+		else
+			unit = unit + 1
+		end
+		self.currentRoster[subgroup] = self.currentRoster[subgroup] or {}
+		self.currentRoster[subgroup][unit] = name
+	end
+	self:UpdateWatchedGroupUnits()
+end
+
+function ShieldTracker:UpdateWatchedGroupUnits()
+	wipe(self.watchedGroupUnits)
+	for k, bar in pairs(self.bars) do
+		if bar and bar.db.unit == "group" then
+			local subgroup = bar.db.unitSubgroup or 0
+			local unitindex = bar.db.unitIndex or 0
+			local name = self.currentRoster[subgroup] and 
+				self.currentRoster[subgroup][unitindex]
+			if name then
+				self.watchedGroupUnits[name] = true
+				bar.unit = name
+			else
+				bar.unit = nil
+			end
+		end
+	end
+end
+
 function ShieldTracker:UPDATE_MOUSEOVER_UNIT(event, unit)
 	self.mouseover = GetUnitName("mouseover", true)
 	if self.mouseover then
@@ -1935,10 +2055,15 @@ function Bar:Create(name, friendlyName, disableAnchor)
 	object.disableAnchor = disableAnchor
 	local profile = ShieldTracker.db.profile
 	object.db = profile.bars[object.name]
-	object.unit = (object.db.unit == "named") and 
-		object.db.unitName or object.db.unit
-	ShieldTracker.watchedUnits[object.unit] = 
-		(ShieldTracker.watchedUnits[object.unit] or 0) + 1
+	object.watchingGroup = false
+	if object.db.unit ~= "group" then
+		object.unit = (object.db.unit == "named") and 
+			object.db.unitName or object.db.unit
+		ShieldTracker.watchedUnits[object.unit] = 
+			(ShieldTracker.watchedUnits[object.unit] or 0) + 1
+	else
+		object.watchingGroup = true
+	end
 	object.singleSpell = nil
 	ShieldTracker:CheckMouseover()
 	-- Add the bar to the addon's table of bars
@@ -2065,19 +2190,27 @@ end
 
 function Bar:UpdateUnit()
 	local oldUnit = self.unit
-	local newUnit = (self.db.unit == "named") and 
-		self.db.unitName or self.db.unit
-	if oldUnit ~= newUnit then
+	if oldUnit and not self.watchingGroup then
 		ShieldTracker.watchedUnits[oldUnit] = 
 			(ShieldTracker.watchedUnits[oldUnit] or 0) - 1
 		if ShieldTracker.watchedUnits[oldUnit] < 1 then
 			ShieldTracker.watchedUnits[oldUnit] = nil
 		end
+	end
+
+	if self.db.unit ~= "group" then
+		local newUnit = (self.db.unit == "named") and 
+			self.db.unitName or self.db.unit
 		self.unit = newUnit
+		self.watchingGroup = false
 		ShieldTracker.watchedUnits[newUnit] = 
 			(ShieldTracker.watchedUnits[newUnit] or 0) + 1
+	else
+		self.watchingGroup = true
 	end
+
 	ShieldTracker:CheckMouseover()
+	ShieldTracker:UpdateWatchedGroupUnits()
 end
 
 function Bar:CheckTracking()
