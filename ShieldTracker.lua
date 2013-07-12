@@ -1984,9 +1984,13 @@ function ShieldTracker:UpdateWatchedGroupUnits()
 				self.currentRoster[subgroup][unitindex]
 			if name then
 				self.watchedGroupUnits[name] = true
-				bar.unit = name
+				if bar.unit ~= name then
+					bar.unit = name
+					bar:Hide()
+				end
 			else
 				bar.unit = nil
+				bar:Hide()
 			end
 		end
 	end
