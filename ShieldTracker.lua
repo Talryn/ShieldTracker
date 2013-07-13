@@ -42,7 +42,16 @@ local UnitAura = _G.UnitAura
 local UnitDebuff = _G.UnitDebuff
 local GetTime = _G.GetTime
 local UnitExists = _G.UnitExists
-local GetUnitName = _G.GetUnitName
+local UnitName = _G.UnitName
+
+local function GetUnitName(unit)
+	local name, server = UnitName(unit)
+	if (server and server ~= "") then
+		return name.."-"..server
+	else
+		return name
+	end
+end
 
 ShieldTracker.playerName = UnitName("player")
 ShieldTracker.bars = {}
@@ -1837,7 +1846,7 @@ local ExpiresFound = {}
 local DurationFound = {}
 
 function ShieldTracker:CheckAuras(unit)
-	local unitName = GetUnitName(unit, true)
+	local unitName = GetUnitName(unit)
 	if not self.watchedUnits[unit] and not self.watchedUnits[unitName] and
 		not self.watchedGroupUnits[unitName] and
 		not (self.watchingMouseover and self.mouseover == unitName) then
@@ -1997,7 +2006,7 @@ function ShieldTracker:UpdateWatchedGroupUnits()
 end
 
 function ShieldTracker:UPDATE_MOUSEOVER_UNIT(event, unit)
-	self.mouseover = GetUnitName("mouseover", true)
+	self.mouseover = GetUnitName("mouseover")
 	if self.mouseover then
 		self:CheckAuras("mouseover")
 	else
