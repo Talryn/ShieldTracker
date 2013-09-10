@@ -2054,7 +2054,7 @@ function ShieldTracker:MigrateOldUnitNanes()
 	-- the player name and server name.
 	for name, bar in pairs(self.db.profile.bars) do
 		if bar and bar.unitName and bar.unitName:find(" - ") then
-			bar.unitName = bar.unitName:gsub(" - ", "-")
+			bar.unitName = bar.unitName:gsub("[ ][-][ ]", "-", 1)
 		end
 	end
 end
