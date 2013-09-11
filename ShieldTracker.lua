@@ -1693,8 +1693,6 @@ function ShieldTracker:OnInitialize()
     -- Load the settings
     self.db = LibStub("AceDB-3.0"):New("ShieldTrackerDB", defaults, "Default")
 
-	self:MigrateData()
-
 	-- Set the number format
 	self:SetNumberFormat(self.db.profile.numberFormat)
 
@@ -1721,6 +1719,7 @@ end
 function ShieldTracker:OnEnable()
 	self:Load()
 	LoadSpellNames()
+	self:CheckForOldUnitNames()
 
 	if not self.optionsFrame then
 	    local displayName = _G.GetAddOnMetadata(ADDON_NAME, "Title")
@@ -2044,17 +2043,17 @@ function ShieldTracker:UNIT_AURA(event, unit)
 	self:CheckAuras(unit)
 end
 
-function ShieldTracker:MigrateData()
-	--self:MigrateOldUnitNames()
-end
-
-function ShieldTracker:MigrateOldUnitNanes()
-	-- Convert the older Blizzard GetUnitName() to the same format returned
-	-- by GetRaidRosterInfo().  Removes the spaces around the dash between
+function ShieldTracker:CheckForOldUnitNames()
+	-- Check for the older Blizzard GetUnitName() format.  
+	-- There should be no spaces around the dash between
 	-- the player name and server name.
+	local fmt = "Invalid unit name for bar '%s'."
 	for name, bar in pairs(self.db.profile.bars) do
-		if bar and bar.unitName and bar.unitName:find(" - ") then
-			bar.unitName = bar.unitName:gsub("[ ][-][ ]", "-", 1)
+		if bar and bar.unitName then
+			local check = bar.unitName:gmatch("[ ][-][ ]")
+			if check and check() then
+				self:Print(fmt:format(bar.name or "nil"))
+			end
 		end
 	end
 end
