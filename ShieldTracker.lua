@@ -2052,7 +2052,7 @@ function ShieldTracker:CheckForOldUnitNames()
 		if bar and bar.unitName then
 			local check = bar.unitName:gmatch("[ ][-][ ]")
 			if check and check() then
-				self:Print(fmt:format(bar.name or "nil"))
+				self:Print(fmt:format(name or "nil"))
 			end
 		end
 	end
