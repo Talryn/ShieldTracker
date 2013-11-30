@@ -133,6 +133,7 @@ local SpellIds = {
 	["Indomitable"] = 108008,
 	-- Miscellaneous
 	["Crystal Shell"] = 137633,  -- Heroic Tortos
+	["Vengeance"] = 132365
 }
 local SpellIdsRev = {}
 for k,v in pairs(SpellIds) do
@@ -223,6 +224,7 @@ local AbsorbsTracked = {
 	["Special Debuffs"] = {
 		["Crystal Shell"] = true,
 		["Shroud of Purgatory"] = true,
+		["Vengeance"] = true
 	},
 }
 
