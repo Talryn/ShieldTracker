@@ -73,6 +73,7 @@ ShieldTracker.CustomUI = {
 }
 
 local AGU = LibStub("AceGUI-3.0")
+local Completing = LibStub("AceGUI-3.0-Completing-EditBox")
 local L = LibStub("AceLocale-3.0"):GetLocale("ShieldTracker", true)
 local LDB = LibStub("LibDataBroker-1.1")
 local LibQTip = LibStub("LibQTip-1.0")
@@ -766,6 +767,11 @@ function ShieldTracker:RenameBar(old, new)
 end
 
 function ShieldTracker:GetOptionsForBar(name)
+	if Completing then
+		Completing:Register ("AutocompleteCharNames", 
+			AUTOCOMPLETE_LIST.ALL)
+	end
+
 	local bar = self.bars[name]
 	local barOpts = {
 		generalOpts = {
@@ -876,6 +882,7 @@ function ShieldTracker:GetOptionsForBar(name)
 							desc = L["UnitNameDesc"],
 							order = 40,
 							type = "input",
+							dialogControl = "EditBoxAutocompleteCharNames",
 							set = function(info, val)
 							    self.db.profile.bars[bar.name].unitName = val
 								self.bars[bar.name]:UpdateUnit()
@@ -948,6 +955,7 @@ function ShieldTracker:GetOptionsForBar(name)
 							    ["LEFT"] = L["Left"],
 							},
 							order = 50,
+							width = "double",
 							set = function(info, val)
 							    self.db.profile.bars[bar.name].timeRemaining = val
 								if val == "None" then
@@ -1300,6 +1308,10 @@ function ShieldTracker:GetOptionsForBar(name)
 			args = self:GetAdvancedPositioning(bar.name),
 		},
 	}
+
+	if Completing then
+		barOpts.generalOpts.args.generalOptions.args.unitName.dialogControl = "EditBoxAutocompleteCharNames"
+	end
 
 	local i = 810
 	for j, category in ipairs(AbsorbsTrackedOrder) do
