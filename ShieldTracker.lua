@@ -771,7 +771,7 @@ end
 function ShieldTracker:GetOptionsForBar(name)
 	if Completing then
 		Completing:Register ("AutocompleteCharNames", 
-			AUTOCOMPLETE_LIST.ALL)
+			_G.AUTOCOMPLETE_LIST.ALL)
 	end
 
 	local bar = self.bars[name]
