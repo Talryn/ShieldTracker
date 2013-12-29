@@ -100,6 +100,8 @@ end
 LoadItemNames()
 
 local SpellIds = {
+	-- Druid
+	["Tooth and Claw"] = 135601,
 	-- Priest
 	["Power Word: Shield"] = 17,
 	["Power Word: Shield (Divine Insight)"] = 123258,
@@ -133,7 +135,10 @@ local SpellIds = {
 	["Indomitable"] = 108008,
 	-- Miscellaneous
 	["Crystal Shell"] = 137633,  -- Heroic Tortos
-	["Vengeance"] = 132365
+	["Vengeance"] = 132365,
+	["Weak Ancient Barrier"] = 142863,
+	["Ancient Barrier"] = 142864,
+	["Strong Ancient Barrier"] = 142865,
 }
 local SpellIdsRev = {}
 for k,v in pairs(SpellIds) do
@@ -173,6 +178,7 @@ end
 
 local AbsorbsTrackedOrder = {
 	"Death Knight",
+	"Druid",
 	"Mage",
 	"Monk",
 	"Paladin",
@@ -199,6 +205,9 @@ local AbsorbsTracked = {
 		["Death Barrier"] = true,
 		["Anti-Magic Shell"] = true,
 	},
+	["Druid"] = {
+		["Tooth and Claw"] = true,
+	},
 	["Monk"] = {
 		["Life Cocoon"] = true,
 		["Guard"] = true,
@@ -224,7 +233,10 @@ local AbsorbsTracked = {
 	["Special Debuffs"] = {
 		["Crystal Shell"] = true,
 		["Shroud of Purgatory"] = true,
-		["Vengeance"] = true
+		["Vengeance"] = true,
+		["Weak Ancient Barrier"] = true,
+		["Ancient Barrier"] = true,
+		["Strong Ancient Barrier"] = true,
 	},
 }
 
