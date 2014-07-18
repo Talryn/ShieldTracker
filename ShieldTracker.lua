@@ -2189,7 +2189,7 @@ function Bar:Initialize()
 	    bar.time:SetPoint(self.db.timeRemaining or "RIGHT")
 	end
 
-    bar:SetMovable()
+    bar:SetMovable(true)
     bar:RegisterForDrag("LeftButton")
     bar:SetScript("OnDragStart",
         function(self, button)
