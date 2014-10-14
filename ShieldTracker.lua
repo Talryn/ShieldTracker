@@ -135,7 +135,7 @@ local SpellIds = {
 	["Indomitable"] = 108008,
 	-- Miscellaneous
 	["Crystal Shell"] = 137633,  -- Heroic Tortos
-	["Vengeance"] = 132365,
+	["Resolve"] = 158300,
 	["Weak Ancient Barrier"] = 142863,
 	["Ancient Barrier"] = 142864,
 	["Strong Ancient Barrier"] = 142865,
@@ -233,7 +233,7 @@ local AbsorbsTracked = {
 	["Special Debuffs"] = {
 		["Crystal Shell"] = true,
 		["Shroud of Purgatory"] = true,
-		["Vengeance"] = true,
+		["Resolve"] = true,
 		["Weak Ancient Barrier"] = true,
 		["Ancient Barrier"] = true,
 		["Strong Ancient Barrier"] = true,
