@@ -1880,38 +1880,38 @@ function ShieldTracker:CheckAuras(unit)
 		return
 	end
 
-    local name, rank, icon, count, dispelType, duration, expires,
-        caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
+	local name, rank, icon, count, dispelType, duration, expires,
+		caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
 		castByPlayer, value, value2, value3
 
 	local shields = ShieldsFound
 	wipe(shields)
 
-    local i = 1
-    repeat
-        name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-            consolidate, spellId, canApplyAura, isBossDebuff, 
-			castByPlayer, value, value2, value3 = UnitAura(unit, i)
-        if name == nil or spellId == nil then break end
+	local i = 1
+	repeat
+		name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+		consolidate, spellId, canApplyAura, isBossDebuff, 
+		castByPlayer, value, value2, value3 = UnitAura(unit, i)
+		if name == nil or spellId == nil then break end
 		local lookup = SpellIdsRev[spellId]
 		if lookup then
 			shields[lookup] = (shields[lookup] or 0) + value
 		end
-        i = i + 1
-    until name == nil
+		i = i + 1
+	until name == nil
 
-    i = 1
-    repeat
-        name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-            consolidate, spellId, canApplyAura, isBossDebuff, 
-			castByPlayer, value, value2, value3 = UnitDebuff(unit, i)
-        if name == nil or spellId == nil then break end
+	i = 1
+	repeat
+		name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+		consolidate, spellId, canApplyAura, isBossDebuff, 
+		castByPlayer, value, value2, value3 = UnitDebuff(unit, i)
+		if name == nil or spellId == nil then break end
 		local lookup = SpellIdsRev[spellId]
 		if lookup then
 			shields[lookup] = (shields[lookup] or 0) + value
 		end
-        i = i + 1
-    until name == nil
+		i = i + 1
+	until name == nil
 
 	for barName, bar in pairs(self.bars) do
 		if bar.db.enabled and (bar.unit == unit or 
@@ -1934,7 +1934,7 @@ function ShieldTracker:CheckAuras(unit)
 					end
 				end
 
-				if totalValue > 0 then
+				if totalValue > 0 or (bar.singleSpell and shields[bar.singleSpell]) then
 					bar:SetValue(totalValue)
 					bar.bar:Show()
 					if bar.singleSpell then
@@ -1951,14 +1951,20 @@ function ShieldTracker:CheckAuras(unit)
 							= UnitDebuff(unit, SpellNames[bar.singleSpell])
 						end
 						if name then
-							bar.bar.active = true
-							bar.bar.timer = expires - GetTime()
-							bar.bar:SetMinMaxValues(0, duration)
-							bar.bar:SetScript("OnUpdate", onUpdateTimer)
+							if duration and duration > 0 then
+								bar.bar.active = true
+								bar.bar.timer = expires - GetTime()
+								bar.bar:SetMinMaxValues(0, duration)
+								bar.bar:SetScript("OnUpdate", onUpdateTimer)
+							else
+								bar.bar:SetMinMaxValues(0, 1)
+								bar.bar:SetValue(1)
+								bar.bar:SetScript("OnUpdate", nil)
+							end
 						end
 					else
 						bar.bar:SetMinMaxValues(0, 1)
-						bar.bar:SetValue(1)					
+						bar.bar:SetValue(1)
 					end
 				else
 					bar.bar:Hide()
