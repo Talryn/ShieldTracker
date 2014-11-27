@@ -108,6 +108,7 @@ local SpellIds = {
 	["Divine Aegis"] = 47753,
 	["Spirit Shell"] = 114908,
 	["Angelic Bulwark"] = 114214,
+	["Clarity of Will"] = 152118,
 	-- Paladin
 	["Illuminated Healing"] = 86273,
 	["Sacred Shield"] = 65148,
@@ -195,6 +196,7 @@ local AbsorbsTracked = {
 		["Spirit Shell"] = true,
 		["Angelic Bulwark"] = true,
 		["Power Word: Shield (Divine Insight)"] = true,
+		["Clarity of Will"] = true,
 	},
 	["Paladin"] = {
 		["Illuminated Healing"] = true,
