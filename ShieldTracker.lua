@@ -112,6 +112,7 @@ local SpellIds = {
 	-- Paladin
 	["Illuminated Healing"] = 86273,
 	["Sacred Shield"] = 65148,
+	["Saved by the Light"] = 157047,
 	-- Death Knight
 	["Blood Shield"] = 77535,
 	["Death Barrier"] = 115635,
@@ -201,6 +202,7 @@ local AbsorbsTracked = {
 	["Paladin"] = {
 		["Illuminated Healing"] = true,
 		["Sacred Shield"] = true,
+		["Saved by the Light"] = true,
 	},
 	["Death Knight"] = {
 		["Blood Shield"] = true,
