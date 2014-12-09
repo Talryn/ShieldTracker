@@ -141,6 +141,7 @@ local SpellIds = {
 	["Weak Ancient Barrier"] = 142863,
 	["Ancient Barrier"] = 142864,
 	["Strong Ancient Barrier"] = 142865,
+	["Nullification Barrier"] = 156803,
 }
 local SpellIdsRev = {}
 for k,v in pairs(SpellIds) do
@@ -241,6 +242,7 @@ local AbsorbsTracked = {
 		["Weak Ancient Barrier"] = true,
 		["Ancient Barrier"] = true,
 		["Strong Ancient Barrier"] = true,
+		["Nullification Barrier"] = true,
 	},
 }
 
