@@ -142,6 +142,7 @@ local SpellIds = {
 	["Ancient Barrier"] = 142864,
 	["Strong Ancient Barrier"] = 142865,
 	["Nullification Barrier"] = 156803,
+	["Nullification Barrier (Player)"] = 163134,
 }
 local SpellIdsRev = {}
 for k,v in pairs(SpellIds) do
