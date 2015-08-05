@@ -113,7 +113,7 @@ local SpellIds = {
 	["Illuminated Healing"] = 86273,
 	["Sacred Shield"] = 65148,
 	["Saved by the Light"] = 157047,
-    ["Avenger's Reprieve"] = 185676,
+	["Avenger's Reprieve"] = 185676,
 	-- Death Knight
 	["Blood Shield"] = 77535,
 	["Death Barrier"] = 115635,
@@ -206,7 +206,7 @@ local AbsorbsTracked = {
 		["Illuminated Healing"] = true,
 		["Sacred Shield"] = true,
 		["Saved by the Light"] = true,
-        ["Avenger's Reprieve"] = true
+		["Avenger's Reprieve"] = true
 	},
 	["Death Knight"] = {
 		["Blood Shield"] = true,
