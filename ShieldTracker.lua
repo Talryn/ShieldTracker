@@ -87,6 +87,8 @@ local LookupOrKeyMT = {__index = function (t,k) return k end}
 
 local ItemIds = {
 	["Indomitable Pride"] = 77211,
+--	["Shieldtronic Shield"] = 118006,
+	["Purified Shard of the Third Moon"] = 133598,
 }
 local ItemNames = {}
 setmetatable(ItemNames, LookupOrKeyMT)
@@ -136,6 +138,9 @@ local SpellIds = {
 	["Soul Leech"] = 108366,
 	-- Items
 	["Indomitable"] = 108008,
+--	["Shieldtronic Shield"] = 173260,  -- Engineering Item
+	["Bulwark of Purity (Demons)"] = 201414, -- Purified Shard of the Third Moon
+	["Bulwark of Purity"] = 202052, -- Purified Shard of the Third Moon
 	-- Miscellaneous
 	["Crystal Shell"] = 137633,  -- Heroic Tortos
 	["Resolve"] = 158300,
@@ -237,6 +242,9 @@ local AbsorbsTracked = {
 	},
 	["Items"] = {
 		["Indomitable"] = true,
+--		["Shieldtronic Shield"] = true,
+		["Bulwark of Purity (Demons)"] = true,
+		["Bulwark of Purity"] = true,
 	},
 	["Special Debuffs"] = {
 		["Crystal Shell"] = true,
