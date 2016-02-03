@@ -453,6 +453,7 @@ local defaults = {
 
 function ShieldTracker:ShowOptions()
 	_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
+	_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
 end
 
 function ShieldTracker:SetSkin(update)
