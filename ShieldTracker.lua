@@ -1,4 +1,5 @@
 local _G = getfenv(0)
+local ADDON_NAME, addon = ...
 
 local string = _G.string
 local table = _G.table
@@ -22,8 +23,12 @@ local function cleanupVersion(version)
 	return version
 end
 
-local ADDON_NAME = ...
-local ADDON_VERSION = cleanupVersion("@project-version@")
+addon.addonTitle = _G.GetAddOnMetadata(ADDON_NAME,"Title")
+addon.addonVersion = cleanupVersion("@project-version@")
+
+addon.CURRENT_BUILD, addon.CURRENT_INTERNAL, 
+    addon.CURRENT_BUILD_DATE, addon.CURRENT_UI_VERSION = _G.GetBuildInfo()
+addon.Legion = addon.CURRENT_UI_VERSION >= 70000
 
 -- Define Bar for now but the rest is at the bottom of the file.
 local Bar = {}
@@ -362,7 +367,7 @@ function Broker.obj:OnEnter()
 	self.tooltip = tooltip 
 
     tooltip:AddHeader(addonHdr:format(
-		_G.GetAddOnMetadata(ADDON_NAME,"Title"), ADDON_VERSION))
+		_G.GetAddOnMetadata(ADDON_NAME,"Title"), addon.addonVersion))
     tooltip:AddLine()
 	tooltip:AddLine("Bar Name", "Unit")
 	tooltip:AddSeparator(1)
@@ -1907,9 +1912,15 @@ function ShieldTracker:CheckAuras(unit)
 
 	local i = 1
 	repeat
-		name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
-		consolidate, spellId, canApplyAura, isBossDebuff, 
-		castByPlayer, value, value2, value3 = UnitAura(unit, i)
+		if addon.Legion then
+			name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+			consolidate, spellId, canApplyAura, isBossDebuff, 
+			castByPlayer, new1, new2, value = UnitAura(unit, i)
+		else
+			name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+			consolidate, spellId, canApplyAura, isBossDebuff, 
+			castByPlayer, value, value2, value3 = UnitAura(unit, i)
+		end
 		if name == nil or spellId == nil then break end
 		local lookup = SpellIdsRev[spellId]
 		if lookup then
