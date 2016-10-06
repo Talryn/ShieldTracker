@@ -121,6 +121,7 @@ local SpellIds = {
 	["Sacred Shield"] = 65148,
 	["Saved by the Light"] = 157047,
 	["Avenger's Reprieve"] = 185676,
+	["Greater Blessing of Kings"] = 203538,
 	-- Death Knight
 	["Blood Shield"] = 77535,
 	["Death Barrier"] = 115635,
@@ -216,7 +217,8 @@ local AbsorbsTracked = {
 		["Illuminated Healing"] = true,
 		["Sacred Shield"] = true,
 		["Saved by the Light"] = true,
-		["Avenger's Reprieve"] = true
+		["Avenger's Reprieve"] = true,
+		["Greater Blessing of Kings"] = true,
 	},
 	["Death Knight"] = {
 		["Blood Shield"] = true,
@@ -451,6 +453,16 @@ local defaults = {
 				unitIndex = 1,
 				tracked = "Selected",
 				tracking = {},
+				label = {
+					enabled = false,
+					anchorPoint = "BOTTOM",
+					anchorX = 0,
+					anchorY = -8,
+					overrideFontSize = false,
+					fontSize = 11,
+					overrideText = false,
+					text = nil,
+				},
 			},
 		},
 	},
@@ -1338,8 +1350,14 @@ function ShieldTracker:GetOptionsForBar(name)
 				},
 			},
 		},
-		anchorOpts = {
+		labelOpts = {
 			order = 230,
+			type = "group",
+			name = L["Label"],
+			args = self:GetLabelOptions(bar.name),
+		},
+		anchorOpts = {
+			order = 240,
 			type = "group",
 			name = L["Anchor"],
 			args = self:GetAdvancedPositioning(bar.name),
@@ -1564,6 +1582,171 @@ function ShieldTracker:GetBarList(barName)
 		end
 	end
 	return bar.barList
+end
+
+function ShieldTracker:GetLabelOptions(name)
+	local bar = self.bars[name]
+	local options = {
+	    description = {
+	        order = 501,
+	        type = "description",
+	        name = L["Label_Desc"],
+		},
+		generalHdr = {
+			order = 510,
+			type = "header",
+			name = L["General Options"],
+		},
+        enabled = {
+			order = 515,
+            name = L["Enabled"],
+            desc = L["Enabled"],
+            type = "toggle",
+            set = function(info, val)
+                self.db.profile.bars[bar.name].label.enabled = val
+				bar:UpdateLabel()
+            end,
+            get = function(info)
+                return self.db.profile.bars[bar.name].label.enabled
+            end,
+        },
+		textHdr = {
+			order = 520,
+			type = "header",
+			name = L["Label"],
+		},
+		overrideText = {
+			order = 525,
+			name = L["Custom"],
+			desc = L["Custom"],
+			type = "toggle",
+			set = function(info, val)
+				self.db.profile.bars[bar.name].label.overrideText = val
+				bar:UpdateLabel()
+			end,
+			get = function(info)
+				return self.db.profile.bars[bar.name].label.overrideText
+			end,
+		},
+		labelText = {
+			order = 528,
+			type = "input",
+			name = L["Label"],
+			desc = L["Label"],
+			set = function(info, val)
+				self.db.profile.bars[bar.name].label.text = val
+				bar:UpdateLabel()
+			end,
+			get = function(info)
+				return self.db.profile.bars[bar.name].label.text
+			end,
+			disabled = function()
+				return not self.db.profile.bars[bar.name].label.overrideText
+			end,
+		},
+		fontSizeHdr = {
+			order = 530,
+			type = "header",
+			name = L["Font size"],
+		},
+		overrideFontSize = {
+			order = 535,
+			name = L["Custom"],
+			desc = L["Custom"],
+			type = "toggle",
+			set = function(info, val)
+				self.db.profile.bars[bar.name].label.overrideFontSize = val
+				bar:UpdateLabel()
+			end,
+			get = function(info)
+				return self.db.profile.bars[bar.name].label.overrideFontSize
+			end,
+			},
+		fontSize = {
+			order = 538,
+			name = L["Font size"],
+			desc = L["Font size"],
+			type = "range",
+			min = 8,
+			max = 30,
+			step = 1,
+			set = function(info, val) 
+				self.db.profile.bars[bar.name].label.fontSize = val
+				bar:UpdateLabel()
+			end,
+			get = function(info,val) return self.db.profile.bars[bar.name].label.fontSize end,
+			disabled = function()
+				return not self.db.profile.bars[bar.name].label.overrideFontSize
+			end,
+		},
+		anchorHdr = {
+			order = 550,
+			type = "header",
+			name = L["Anchor"],
+		},
+		anchorPoint = {
+			order = 560,
+			name = L["Anchor Point"],
+			desc = L["LabelAnchorPoint_OptDesc"],
+			type = "select",
+			values = {
+			    ["TOP"] = L["Top"],
+			    ["BOTTOM"] = L["Bottom"],
+			    ["LEFT"] = L["Left"],
+			    ["RIGHT"] = L["Right"],
+				["CENTER"] = L["Center"],
+			},
+			set = function(info, val)
+			    self.db.profile.bars[bar.name].label.anchorPoint = val
+				bar:UpdateLabel()
+			end,
+	        get = function(info)
+	            return self.db.profile.bars[bar.name].label.anchorPoint
+	        end,
+			disabled = function()
+				return not self.db.profile.bars[bar.name].label.enabled
+			end,
+		},
+		anchorX = {
+			order = 570,
+			name = L["X Offset"],
+			desc = L["XOffsetAnchor_Desc"],	
+			type = "range",
+			softMin = -floor(_G.GetScreenWidth()),
+			softMax = floor(_G.GetScreenWidth()),
+			bigStep = 1,
+			set = function(info, val)
+			    self.db.profile.bars[bar.name].label.anchorX = val
+				bar:UpdateLabel()
+			end,
+			get = function(info, val)
+			    return self.db.profile.bars[bar.name].label.anchorX
+			end,
+			disabled = function()
+				return not self.db.profile.bars[bar.name].label.enabled
+			end,
+		},
+		anchorY = {
+			order = 580,
+			name = L["Y Offset"],
+			desc = L["YOffsetAnchor_Desc"],	
+			type = "range",
+			softMin = -floor(_G.GetScreenHeight()),
+			softMax = floor(_G.GetScreenHeight()),
+			bigStep = 1,
+			set = function(info, val)
+			    self.db.profile.bars[bar.name].label.anchorY = val
+				bar:UpdateLabel()
+			end,
+			get = function(info, val)
+			    return self.db.profile.bars[bar.name].label.anchorY
+			end,
+			disabled = function()
+				return not self.db.profile.bars[bar.name].label.enabled
+			end,
+		},
+	}
+	return options
 end
 
 function ShieldTracker:GetAdvancedPositioning(name)
@@ -2238,6 +2421,11 @@ function Bar:Initialize()
 	    bar.time:SetPoint(self.db.timeRemaining or "RIGHT")
 	end
 
+    bar.label = bar:CreateFontString(nil, "OVERLAY")
+    bar.label:SetJustifyH("CENTER")
+    bar.label:SetShadowOffset(1, -1)
+	self:UpdateLabel()
+
     bar:SetMovable(true)
     bar:RegisterForDrag("LeftButton")
     bar:SetScript("OnDragStart",
@@ -2264,6 +2452,31 @@ function Bar:Initialize()
     bar:SetValue(1)
     bar:Hide()
 	self:Lock(self.db.locked)
+end
+
+function Bar:UpdateLabel()
+	local ff, fh, fontFlags = ShieldTracker:GetFontSettings(self.name)
+	local fontSize = self.db.label.overrideFontSize and self.db.label.fontSize or fh
+	self.bar.label:SetFont(ff, fontSize, fontFlags)
+	local tc = self.db.textcolor
+	self.bar.label:SetTextColor(tc.r, tc.g, tc.b, tc.a)
+	self.bar.label:SetText(self.db.label.overrideText and self.db.label.text or self.friendlyName)
+
+	local localAnchors = {
+		["BOTTOM"] = "TOP",
+		["RIGHT"] = "LEFT",
+		["LEFT"] = "RIGHT",
+		["TOP"] = "BOTTOM",
+		["CENTER"] = "CENTER",
+	}
+	self.bar.label:ClearAllPoints()
+	self.bar.label:SetPoint(localAnchors[self.db.label.anchorPoint] or "CENTER", self.bar, 
+		self.db.label.anchorPoint, self.db.label.anchorX, self.db.label.anchorY)
+	if self.db.label.enabled then
+		self.bar.label:Show()
+	else
+		self.bar.label:Hide()
+	end
 end
 
 function Bar:Lock(locked)
