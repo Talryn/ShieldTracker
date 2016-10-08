@@ -124,23 +124,26 @@ local SpellIds = {
 	["Greater Blessing of Kings"] = 203538,
 	-- Death Knight
 	["Blood Shield"] = 77535,
-	["Death Barrier"] = 115635,
+	["Death Barrier"] = 115635,  -- Removed in Legion?
 	["Anti-Magic Shell"] = 48707,
 	["Shroud of Purgatory"] = 116888,
+	["Tombstone"] = 219809,
+	["Frost Shield"] = 207203,
 	-- Warrior
 	["Shield Barrier"] = 112048,
+	["Ignore Pain"] = 190456,
 	-- Mage
 	["Ice Barrier"] = 11426,
-	["Incanter's Ward"] = 1463,
+	["Incanter's Ward"] = 1463,  -- Removed in Legion?
 	-- Monk
 	["Life Cocoon"] = 116849,
 	["Guard"] = 115295,
 	["Guard (Glyphed)"] = 123402,
 	["Guard (Black Ox Statue)"] = 118604,
 	-- Warlock
-	["Sacrificial Pact"] = 108416,
-	["Twilight Ward"] = 6229,
-	["Fury Ward"] = 119839,
+	["Dark Pact"] = 108416,
+	["Twilight Ward"] = 6229,  -- Removed in Legion?
+	["Fury Ward"] = 119839,  -- Removed in Legion?
 	["Soul Leech"] = 108366,
 	-- Items
 	["Indomitable"] = 108008,
@@ -207,45 +210,47 @@ local AbsorbsTrackedOrder = {
 local AbsorbsTracked = {
 	["Priest"] = {
 		["Power Word: Shield"] = true,
-		["Divine Aegis"] = true,
-		["Spirit Shell"] = true,
-		["Angelic Bulwark"] = true,
-		["Power Word: Shield (Divine Insight)"] = true,
+		--["Divine Aegis"] = true,
+		--["Spirit Shell"] = true,
+		--["Angelic Bulwark"] = true,
+		--["Power Word: Shield (Divine Insight)"] = true,
 		["Clarity of Will"] = true,
 	},
 	["Paladin"] = {
-		["Illuminated Healing"] = true,
-		["Sacred Shield"] = true,
-		["Saved by the Light"] = true,
-		["Avenger's Reprieve"] = true,
+		--["Illuminated Healing"] = true,
+		--["Sacred Shield"] = true,
+		--["Saved by the Light"] = true,
+		--["Avenger's Reprieve"] = true,
 		["Greater Blessing of Kings"] = true,
 	},
 	["Death Knight"] = {
 		["Blood Shield"] = true,
-		["Death Barrier"] = true,
+		--["Death Barrier"] = true,
 		["Anti-Magic Shell"] = true,
+		["Tombstone"] = true,
+		["Frost Shield"] = true,
 	},
 	["Druid"] = {
-		["Tooth and Claw"] = true,
+		--["Tooth and Claw"] = true,
 	},
 	["Monk"] = {
 		["Life Cocoon"] = true,
-		["Guard"] = true,
-		["Guard (Glyphed)"] = true,
-		["Guard (Black Ox Statue)"] = true,
+		--["Guard"] = true,
+		--["Guard (Glyphed)"] = true,
+		--["Guard (Black Ox Statue)"] = true,
 	},
 	["Mage"] = {
 		["Ice Barrier"] = true,
-		["Incanter's Ward"] = true,
+		--["Incanter's Ward"] = true,
 	},
 	["Warlock"] = {
-		["Sacrificial Pact"] = true,
-		["Twilight Ward"] = true,
-		["Fury Ward"] = true,
+		["Dark Pact"] = true,
 		["Soul Leech"] = true,
+		--["Twilight Ward"] = true,
+		--["Fury Ward"] = true,
 	},
 	["Warrior"] = {
-		["Shield Barrier"] = true,
+		["Ignore Pain"] = true,
 	},
 	["Items"] = {
 		["Indomitable"] = true,
@@ -256,7 +261,6 @@ local AbsorbsTracked = {
 	["Special Debuffs"] = {
 		["Crystal Shell"] = true,
 		["Shroud of Purgatory"] = true,
-		["Resolve"] = true,
 		["Weak Ancient Barrier"] = true,
 		["Ancient Barrier"] = true,
 		["Strong Ancient Barrier"] = true,
