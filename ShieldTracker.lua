@@ -122,6 +122,7 @@ local SpellIds = {
 	["Saved by the Light"] = 157047,
 	["Avenger's Reprieve"] = 185676,
 	["Greater Blessing of Kings"] = 203538,
+	["Bulwark of Order"] = 209389,
 	-- Death Knight
 	["Blood Shield"] = 77535,
 	["Death Barrier"] = 115635,  -- Removed in Legion?
@@ -222,6 +223,7 @@ local AbsorbsTracked = {
 		--["Saved by the Light"] = true,
 		--["Avenger's Reprieve"] = true,
 		["Greater Blessing of Kings"] = true,
+		["Bulwark of Order"] = true,
 	},
 	["Death Knight"] = {
 		["Blood Shield"] = true,
