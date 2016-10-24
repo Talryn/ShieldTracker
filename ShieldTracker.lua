@@ -123,6 +123,7 @@ local SpellIds = {
 	["Avenger's Reprieve"] = 185676,
 	["Greater Blessing of Kings"] = 203538,
 	["Bulwark of Order"] = 209389,
+	["Shield of Vengeance"] = 184662,
 	-- Death Knight
 	["Blood Shield"] = 77535,
 	["Death Barrier"] = 115635,  -- Removed in Legion?
@@ -224,6 +225,7 @@ local AbsorbsTracked = {
 		--["Avenger's Reprieve"] = true,
 		["Greater Blessing of Kings"] = true,
 		["Bulwark of Order"] = true,
+		["Shield of Vengeance"] = true,
 	},
 	["Death Knight"] = {
 		["Blood Shield"] = true,
