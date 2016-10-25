@@ -1,4 +1,4 @@
-## Interface: 70000
+## Interface: 70100
 ## Title: Shield Tracker
 ## Notes: Tracks a wide variety of shields / absorbs.
 ## Author: Talryn
