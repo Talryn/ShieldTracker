@@ -122,7 +122,7 @@ local SpellIds = {
 	["Saved by the Light"] = 157047,
 	["Avenger's Reprieve"] = 185676,
 	["Greater Blessing of Kings"] = 203538,
-	["Bulwark of Order"] = 209389,
+	["Bulwark of Order"] = 209388,
 	["Shield of Vengeance"] = 184662,
 	-- Death Knight
 	["Blood Shield"] = 77535,
@@ -136,6 +136,8 @@ local SpellIds = {
 	["Ignore Pain"] = 190456,
 	-- Mage
 	["Ice Barrier"] = 11426,
+	["Prismatic Barrier"] = 235450,
+	["Blazing Barrier"] = 235313,
 	["Incanter's Ward"] = 1463,  -- Removed in Legion?
 	-- Monk
 	["Life Cocoon"] = 116849,
@@ -246,6 +248,8 @@ local AbsorbsTracked = {
 	},
 	["Mage"] = {
 		["Ice Barrier"] = true,
+		["Prismatic Barrier"] = true,
+		["Blazing Barrier"] = true,
 		--["Incanter's Ward"] = true,
 	},
 	["Warlock"] = {
