@@ -179,6 +179,14 @@ local function LoadSpellNames()
 end
 LoadSpellNames()
 
+local UsesSecondValue = {
+	[SpellIds["Greater Blessing of Kings"]] = true,
+}
+
+local SpellTracking = {
+	[SpellIds["Greater Blessing of Kings"]] = "secondValue",
+}
+
 local TipFrame = _G.CreateFrame("GameTooltip", "ShieldTrackerTooltipFrame", _G.UIParent, "GameTooltipTemplate")
 TipFrame:SetOwner(_G.UIParent, "ANCHOR_NONE")
 local function ConcatenateSpellText(spellName, ...)
@@ -2088,6 +2096,26 @@ local function onUpdateTimer(self, elapsed)
 	end
 end
 
+local function onUpdateTimerBasic(self, elapsed)
+	self.lastUpdate = (self.lastUpdate or 0) + elapsed
+	self.timer = self.timer - elapsed
+	if self.lastUpdate >= 0.1 then
+		self.lastUpdate = 0
+		if self.active then
+			if self.timer < 0 then
+				self.timer = 0
+				self.active = false
+				self:SetScript("OnUpdate", nil)
+				self:Hide()
+			else
+				self:Show()
+			end
+		else
+			self:Hide()
+		end
+	end
+end
+
 local ShieldsFound = {}
 local ExpiresFound = {}
 local DurationFound = {}
@@ -2102,7 +2130,7 @@ function ShieldTracker:CheckAuras(unit)
 
 	local name, rank, icon, count, dispelType, duration, expires,
 		caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
-		castByPlayer, new1, new2, value
+		castByPlayer, new1, new2, value, value2
 
 	local shields = ShieldsFound
 	wipe(shields)
@@ -2111,11 +2139,11 @@ function ShieldTracker:CheckAuras(unit)
 	repeat
 		name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
 		consolidate, spellId, canApplyAura, isBossDebuff, 
-		castByPlayer, new1, new2, value = UnitAura(unit, i)
+		castByPlayer, new1, new2, value, value2 = UnitAura(unit, i)
 		if name == nil or spellId == nil then break end
 		local lookup = SpellIdsRev[spellId]
 		if lookup then
-			shields[lookup] = (shields[lookup] or 0) + value
+			shields[lookup] = (shields[lookup] or 0) + (UsesSecondValue[spellId] and value2 or value)
 		end
 		i = i + 1
 	until name == nil
@@ -2124,11 +2152,11 @@ function ShieldTracker:CheckAuras(unit)
 	repeat
 		name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
 		consolidate, spellId, canApplyAura, isBossDebuff, 
-		castByPlayer, new1, new2, value = UnitDebuff(unit, i)
+		castByPlayer, new1, new2, value, value2 = UnitDebuff(unit, i)
 		if name == nil or spellId == nil then break end
 		local lookup = SpellIdsRev[spellId]
 		if lookup then
-			shields[lookup] = (shields[lookup] or 0) + value
+			shields[lookup] = (shields[lookup] or 0) + (UsesSecondValue[spellId] and value2 or value)
 		end
 		i = i + 1
 	until name == nil
@@ -2161,21 +2189,28 @@ function ShieldTracker:CheckAuras(unit)
 				        name, rank, icon, count, dispelType, duration, 
 						expires, caster, stealable, consolidate, spellId, 
 						canApplyAura, isBossDebuff, castByPlayer, 
-						new1, new2, value 
+						new1, new2, value, value2
 						= UnitAura(unit, SpellNames[bar.singleSpell])
 						if not name then
 					        name, rank, icon, count, dispelType, duration, 
 							expires, caster, stealable, consolidate, spellId, 
 							canApplyAura, isBossDebuff, castByPlayer, 
-							new1, new2, value 
+							new1, new2, value, value2
 							= UnitDebuff(unit, SpellNames[bar.singleSpell])
 						end
 						if name then
 							if duration and duration > 0 then
 								bar.bar.active = true
 								bar.bar.timer = expires - GetTime()
-								bar.bar:SetMinMaxValues(0, duration)
-								bar.bar:SetScript("OnUpdate", onUpdateTimer)
+								local tracking = SpellTracking[spellId]
+								if tracking == "secondValue" then
+									bar.bar:SetMinMaxValues(0, value or 1)
+									bar.bar:SetValue(value2 or 1)
+									bar.bar:SetScript("OnUpdate", onUpdateTimerBasic)
+								else
+									bar.bar:SetMinMaxValues(0, duration)
+									bar.bar:SetScript("OnUpdate", onUpdateTimer)
+								end
 							else
 								bar.bar:SetMinMaxValues(0, 1)
 								bar.bar:SetValue(1)
