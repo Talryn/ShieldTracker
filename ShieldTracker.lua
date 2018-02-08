@@ -154,6 +154,7 @@ local SpellIds = {
 --	["Shieldtronic Shield"] = 173260,  -- Engineering Item
 	["Bulwark of Purity (Demons)"] = 201414, -- Purified Shard of the Third Moon
 	["Bulwark of Purity"] = 202052, -- Purified Shard of the Third Moon
+	["Xavaric's Magnum Opus"] = 207472,
 	-- Miscellaneous
 	["Crystal Shell"] = 137633,  -- Heroic Tortos
 	["Resolve"] = 158300,
@@ -274,6 +275,7 @@ local AbsorbsTracked = {
 --		["Shieldtronic Shield"] = true,
 		["Bulwark of Purity (Demons)"] = true,
 		["Bulwark of Purity"] = true,
+		["Xavaric's Magnum Opus"] = true,
 	},
 	["Special Debuffs"] = {
 		["Crystal Shell"] = true,
