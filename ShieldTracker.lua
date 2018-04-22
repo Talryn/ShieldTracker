@@ -29,6 +29,57 @@ addon.addonVersion = cleanupVersion("@project-version@")
 addon.CURRENT_BUILD, addon.CURRENT_INTERNAL, 
     addon.CURRENT_BUILD_DATE, addon.CURRENT_UI_VERSION = _G.GetBuildInfo()
 addon.Legion = addon.CURRENT_UI_VERSION >= 70000
+addon.BfA = addon.CURRENT_UI_VERSION >= 80000
+
+-- UnitAura for BfA.  Scans buffs by name.
+addon.UnitAura = function(unit, spellName, rank, filter)
+	local name, icon, count, dispelType, duration, expires, 
+	caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
+	isBossDebuff, castByPlayer, value1, value2, value3
+	
+	local i = 1
+	name = ""
+	while name ~= nil and i < 100 do
+		name, icon, count, dispelType, duration, expires, 
+		caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
+		isBossDebuff, castByPlayer, value1, value2, value3
+			= _G.UnitAura(unit, i, filter)
+			if name == spellName then
+				return name, nil, icon, count, dispelType, duration, expires, 
+					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
+					isBossDebuff, castByPlayer, value1, value2, value3
+			end
+			i = i + 1
+	end
+	return nil
+end
+
+-- UnitDebuff for BfA.  Scans debuffs by name.
+addon.UnitDebuff = function(unit, spellName, rank, filter)
+	local name, icon, count, dispelType, duration, expires, 
+	caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
+	isBossDebuff, castByPlayer, value1, value2, value3
+	
+	local i = 1
+	name = ""
+	while name ~= nil and i < 100 do
+		name, icon, count, dispelType, duration, expires, 
+		caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
+		isBossDebuff, castByPlayer, value1, value2, value3
+			= _G.UnitDebuff(unit, i, filter)
+		if name == spellName then
+			return name, nil, icon, count, dispelType, duration, expires, 
+				caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
+				isBossDebuff, castByPlayer, value1, value2, value3
+		end
+		i = i + 1
+	end
+	return nil
+end
+
+-- Conditional for WoD/BfA
+local UnitAura = addon.BfA and addon.UnitAura or _G.UnitAura
+local UnitDebuff = addon.BfA and addon.UnitDebuff or _G.UnitDebuff
 
 -- Define Bar for now but the rest is at the bottom of the file.
 local Bar = {}
@@ -44,7 +95,6 @@ local type, unpack = _G.type, _G.unpack
 
 -- Local for Wow APIs
 local UnitAura = _G.UnitAura
-local UnitDebuff = _G.UnitDebuff
 local GetTime = _G.GetTime
 local UnitExists = _G.UnitExists
 local UnitName = _G.UnitName
