@@ -32,7 +32,7 @@ addon.Legion = addon.CURRENT_UI_VERSION >= 70000
 addon.BfA = addon.CURRENT_UI_VERSION >= 80000
 
 -- UnitAura for BfA.  Scans buffs by name.
-addon.UnitAura = function(unit, spellName, rank, filter)
+addon.UnitAura = function(unit, spellName, filter)
 	local name, icon, count, dispelType, duration, expires, 
 	caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 	isBossDebuff, castByPlayer, value1, value2, value3
@@ -45,7 +45,7 @@ addon.UnitAura = function(unit, spellName, rank, filter)
 		isBossDebuff, castByPlayer, value1, value2, value3
 			= _G.UnitAura(unit, i, filter)
 			if name == spellName then
-				return name, nil, icon, count, dispelType, duration, expires, 
+				return name, icon, count, dispelType, duration, expires, 
 					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 					isBossDebuff, castByPlayer, value1, value2, value3
 			end
@@ -55,7 +55,7 @@ addon.UnitAura = function(unit, spellName, rank, filter)
 end
 
 -- UnitDebuff for BfA.  Scans debuffs by name.
-addon.UnitDebuff = function(unit, spellName, rank, filter)
+addon.UnitDebuff = function(unit, spellName, filter)
 	local name, icon, count, dispelType, duration, expires, 
 	caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 	isBossDebuff, castByPlayer, value1, value2, value3
@@ -68,7 +68,7 @@ addon.UnitDebuff = function(unit, spellName, rank, filter)
 		isBossDebuff, castByPlayer, value1, value2, value3
 			= _G.UnitDebuff(unit, i, filter)
 		if name == spellName then
-			return name, nil, icon, count, dispelType, duration, expires, 
+			return name, icon, count, dispelType, duration, expires, 
 				caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
 				isBossDebuff, castByPlayer, value1, value2, value3
 		end
@@ -2180,7 +2180,7 @@ function ShieldTracker:CheckAuras(unit)
 		return
 	end
 
-	local name, rank, icon, count, dispelType, duration, expires,
+	local name, icon, count, dispelType, duration, expires,
 		caster, stealable, consolidate, spellId, canApplyAura, isBossDebuff,
 		castByPlayer, new1, new2, value, value2
 
@@ -2189,7 +2189,7 @@ function ShieldTracker:CheckAuras(unit)
 
 	local i = 1
 	repeat
-		name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+		name, icon, count, dispelType, duration, expires, caster, stealable, 
 		consolidate, spellId, canApplyAura, isBossDebuff, 
 		castByPlayer, new1, new2, value, value2 = UnitAura(unit, i)
 		if name == nil or spellId == nil then break end
@@ -2202,7 +2202,7 @@ function ShieldTracker:CheckAuras(unit)
 
 	i = 1
 	repeat
-		name, rank, icon, count, dispelType, duration, expires, caster, stealable, 
+		name, icon, count, dispelType, duration, expires, caster, stealable, 
 		consolidate, spellId, canApplyAura, isBossDebuff, 
 		castByPlayer, new1, new2, value, value2 = UnitDebuff(unit, i)
 		if name == nil or spellId == nil then break end
@@ -2238,13 +2238,13 @@ function ShieldTracker:CheckAuras(unit)
 					bar:SetValue(totalValue)
 					bar.bar:Show()
 					if bar.singleSpell then
-				        name, rank, icon, count, dispelType, duration, 
+				        name, icon, count, dispelType, duration, 
 						expires, caster, stealable, consolidate, spellId, 
 						canApplyAura, isBossDebuff, castByPlayer, 
 						new1, new2, value, value2
 						= UnitAura(unit, SpellNames[bar.singleSpell])
 						if not name then
-					        name, rank, icon, count, dispelType, duration, 
+					        name, icon, count, dispelType, duration, 
 							expires, caster, stealable, consolidate, spellId, 
 							canApplyAura, isBossDebuff, castByPlayer, 
 							new1, new2, value, value2
