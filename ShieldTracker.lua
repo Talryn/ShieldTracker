@@ -77,10 +77,6 @@ addon.UnitDebuff = function(unit, spellName, filter)
 	return nil
 end
 
--- Conditional for WoD/BfA
-local UnitAura = addon.BfA and addon.UnitAura or _G.UnitAura
-local UnitDebuff = addon.BfA and addon.UnitDebuff or _G.UnitDebuff
-
 -- Define Bar for now but the rest is at the bottom of the file.
 local Bar = {}
 
@@ -95,6 +91,7 @@ local type, unpack = _G.type, _G.unpack
 
 -- Local for Wow APIs
 local UnitAura = _G.UnitAura
+local UnitDebuff = _G.UnitDebuff
 local GetTime = _G.GetTime
 local UnitExists = _G.UnitExists
 local UnitName = _G.UnitName
@@ -2242,13 +2239,13 @@ function ShieldTracker:CheckAuras(unit)
 						expires, caster, stealable, consolidate, spellId, 
 						canApplyAura, isBossDebuff, castByPlayer, 
 						new1, new2, value, value2
-						= UnitAura(unit, SpellNames[bar.singleSpell])
+						= addon.UnitAura(unit, SpellNames[bar.singleSpell])
 						if not name then
 					        name, icon, count, dispelType, duration, 
 							expires, caster, stealable, consolidate, spellId, 
 							canApplyAura, isBossDebuff, castByPlayer, 
 							new1, new2, value, value2
-							= UnitDebuff(unit, SpellNames[bar.singleSpell])
+							= addon.UnitDebuff(unit, SpellNames[bar.singleSpell])
 						end
 						if name then
 							if duration and duration > 0 then
