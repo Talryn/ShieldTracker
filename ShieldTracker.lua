@@ -26,27 +26,27 @@ end
 addon.addonTitle = _G.GetAddOnMetadata(ADDON_NAME,"Title")
 addon.addonVersion = cleanupVersion("@project-version@")
 
-addon.CURRENT_BUILD, addon.CURRENT_INTERNAL, 
+addon.CURRENT_BUILD, addon.CURRENT_INTERNAL,
     addon.CURRENT_BUILD_DATE, addon.CURRENT_UI_VERSION = _G.GetBuildInfo()
 addon.Legion = addon.CURRENT_UI_VERSION >= 70000
 addon.BfA = addon.CURRENT_UI_VERSION >= 80000
 
 -- UnitAura for BfA.  Scans buffs by name.
 addon.UnitAura = function(unit, spellName, filter)
-	local name, icon, count, dispelType, duration, expires, 
-	caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
+	local name, icon, count, dispelType, duration, expires,
+	caster, isStealable, shouldConsolidate, spellId, canApplyAura,
 	isBossDebuff, castByPlayer, value1, value2, value3
-	
+
 	local i = 1
 	name = ""
 	while name ~= nil and i < 100 do
-		name, icon, count, dispelType, duration, expires, 
-		caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
+		name, icon, count, dispelType, duration, expires,
+		caster, isStealable, shouldConsolidate, spellId, canApplyAura,
 		isBossDebuff, castByPlayer, value1, value2, value3
 			= _G.UnitAura(unit, i, filter)
 			if name == spellName then
-				return name, icon, count, dispelType, duration, expires, 
-					caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
+				return name, icon, count, dispelType, duration, expires,
+					caster, isStealable, shouldConsolidate, spellId, canApplyAura,
 					isBossDebuff, castByPlayer, value1, value2, value3
 			end
 			i = i + 1
@@ -56,20 +56,20 @@ end
 
 -- UnitDebuff for BfA.  Scans debuffs by name.
 addon.UnitDebuff = function(unit, spellName, filter)
-	local name, icon, count, dispelType, duration, expires, 
-	caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
+	local name, icon, count, dispelType, duration, expires,
+	caster, isStealable, shouldConsolidate, spellId, canApplyAura,
 	isBossDebuff, castByPlayer, value1, value2, value3
-	
+
 	local i = 1
 	name = ""
 	while name ~= nil and i < 100 do
-		name, icon, count, dispelType, duration, expires, 
-		caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
+		name, icon, count, dispelType, duration, expires,
+		caster, isStealable, shouldConsolidate, spellId, canApplyAura,
 		isBossDebuff, castByPlayer, value1, value2, value3
 			= _G.UnitDebuff(unit, i, filter)
 		if name == spellName then
-			return name, icon, count, dispelType, duration, expires, 
-				caster, isStealable, shouldConsolidate, spellId, canApplyAura, 
+			return name, icon, count, dispelType, duration, expires,
+				caster, isStealable, shouldConsolidate, spellId, canApplyAura,
 				isBossDebuff, castByPlayer, value1, value2, value3
 		end
 		i = i + 1
@@ -132,7 +132,7 @@ local LibQTip = LibStub("LibQTip-1.0")
 local icon = LibStub("LibDBIcon-1.0")
 local LSM = LibStub:GetLibrary("LibSharedMedia-3.0")
 
-local CURRENT_BUILD, CURRENT_INTERNAL, 
+local CURRENT_BUILD, CURRENT_INTERNAL,
     CURRENT_BUILD_DATE, CURRENT_UI_VERSION = GetBuildInfo()
 
 local LookupOrKeyMT = {__index = function (t,k) return k end}
@@ -163,6 +163,8 @@ local SpellIds = {
 	["Spirit Shell"] = 114908,
 	["Angelic Bulwark"] = 114214,
 	["Clarity of Will"] = 152118,
+	["Luminous Barrier"] = 271466,
+	["Purified Resolve"] = 196439,
 	-- Paladin
 	["Illuminated Healing"] = 86273,
 	["Sacred Shield"] = 65148,
@@ -211,6 +213,7 @@ local SpellIds = {
 	["Nullification Barrier"] = 156803,
 	["Nullification Barrier (Player)"] = 163134,
 	["Time Release"] = 206610,
+	["Resounding Protection"] = 269279,
 }
 local SpellIdsRev = {}
 for k,v in pairs(SpellIds) do
@@ -271,55 +274,38 @@ local AbsorbsTrackedOrder = {
 local AbsorbsTracked = {
 	["Priest"] = {
 		["Power Word: Shield"] = true,
-		--["Divine Aegis"] = true,
-		--["Spirit Shell"] = true,
-		--["Angelic Bulwark"] = true,
-		--["Power Word: Shield (Divine Insight)"] = true,
-		["Clarity of Will"] = true,
+		["Luminous Barrier"] = true,
+		["Purified Resolve"] = true,
 	},
 	["Paladin"] = {
-		--["Illuminated Healing"] = true,
-		--["Sacred Shield"] = true,
-		--["Saved by the Light"] = true,
-		--["Avenger's Reprieve"] = true,
 		["Greater Blessing of Kings"] = true,
-		["Bulwark of Order"] = true,
 		["Shield of Vengeance"] = true,
 	},
 	["Death Knight"] = {
 		["Blood Shield"] = true,
-		--["Death Barrier"] = true,
 		["Anti-Magic Shell"] = true,
 		["Tombstone"] = true,
 		["Frost Shield"] = true,
 	},
 	["Druid"] = {
-		--["Tooth and Claw"] = true,
 	},
 	["Monk"] = {
 		["Life Cocoon"] = true,
-		--["Guard"] = true,
-		--["Guard (Glyphed)"] = true,
-		--["Guard (Black Ox Statue)"] = true,
 	},
 	["Mage"] = {
 		["Ice Barrier"] = true,
 		["Prismatic Barrier"] = true,
 		["Blazing Barrier"] = true,
-		--["Incanter's Ward"] = true,
 	},
 	["Warlock"] = {
 		["Dark Pact"] = true,
 		["Soul Leech"] = true,
-		--["Twilight Ward"] = true,
-		--["Fury Ward"] = true,
 	},
 	["Warrior"] = {
 		["Ignore Pain"] = true,
 	},
 	["Items"] = {
 		["Indomitable"] = true,
---		["Shieldtronic Shield"] = true,
 		["Bulwark of Purity (Demons)"] = true,
 		["Bulwark of Purity"] = true,
 		["Xavaric's Magnum Opus"] = true,
@@ -332,6 +318,7 @@ local AbsorbsTracked = {
 		["Strong Ancient Barrier"] = true,
 		["Nullification Barrier"] = true,
 		["Time Release"] = true,
+		["Resounding Protection"] = true,
 	},
 }
 
@@ -437,7 +424,7 @@ local barInfoFmt1 = "%s%s"
 local barInfoFmt2 = "%s%s"
 function Broker.obj:OnEnter()
 	local tooltip = LibQTip:Acquire("ShieldTrackerTooltip", 2, "LEFT", "RIGHT")
-	self.tooltip = tooltip 
+	self.tooltip = tooltip
 
     tooltip:AddHeader(addonHdr:format(
 		_G.GetAddOnMetadata(ADDON_NAME,"Title"), addon.addonVersion))
@@ -504,7 +491,7 @@ local defaults = {
 				color = {r = 1.0, g = 0.0, b = 0.0, a = 1},
 				bgcolor = {r = 0.65, g = 0.0, b = 0.0, a = 0.8},
 				textcolor = {r = 1.0, g = 1.0, b = 1.0, a = 1},
-				x = 0, 
+				x = 0,
 				y = 0,
 				width = 75,
 				height = 15,
@@ -670,11 +657,11 @@ function ShieldTracker:GetGeneralOptions()
 					desc = L["NumberFormat_OptionDesc"],
 					type = "select",
 					values = {
-					    ["Raw"] = L["Raw"] .. 
+					    ["Raw"] = L["Raw"] ..
 							" (" .. FormatNumberRaw(testNumber) .. ")",
-					    ["Delimited"] = L["Delimited"] .. 
+					    ["Delimited"] = L["Delimited"] ..
 							" (" .. FormatNumberDelimited(testNumber) .. ")",
-					    ["Abbreviated"] = L["Abbreviated"] .. 
+					    ["Abbreviated"] = L["Abbreviated"] ..
 							" (" .. FormatNumberAbbreviated(testNumber) .. ")"
 					},
 					order = 34,
@@ -741,7 +728,7 @@ function ShieldTracker:GetGeneralOptions()
 					min = 8,
 					max = 30,
 					step = 1,
-					set = function(info, val) 
+					set = function(info, val)
 						self.db.profile.font_size = val
 						for k, v in pairs(self.bars) do
 							if v then v:ResetFonts() end
@@ -757,7 +744,7 @@ function ShieldTracker:GetGeneralOptions()
 					values = LSM:HashTable("font"),
 					dialogControl = 'LSM30_Font',
 					get = function() return self.db.profile.font_face end,
-					set = function(info, val) 
+					set = function(info, val)
 					    self.db.profile.font_face = val
 						for k, v in pairs(self.bars) do
 							if v then v:ResetFonts() end
@@ -828,7 +815,7 @@ function ShieldTracker:GetBarOptions()
 			--	end
 			--end,
 			set = function(info, val)
-				if val and val ~= "" and 
+				if val and val ~= "" and
 					rawget(self.db.profile.bars, val) == nil then
 					self:CreateNewBar(val)
 				end
@@ -881,14 +868,14 @@ function ShieldTracker:RenameBar(old, new)
 	self.bars[old] = nil
 	self.bars[new].name = new
 	self.bars[new].friendlyName = new
-	self.options.args.barOpts.args[new.."_Bar"] = 
+	self.options.args.barOpts.args[new.."_Bar"] =
 		self.options.args.barOpts.args[old.."_Bar"]
 	self.options.args.barOpts.args[old.."_Bar"] = nil
 end
 
 function ShieldTracker:GetOptionsForBar(name)
 	if Completing then
-		Completing:Register ("AutocompleteCharNames", 
+		Completing:Register ("AutocompleteCharNames",
 			_G.AUTOCOMPLETE_LIST.ALL)
 	end
 
@@ -910,7 +897,7 @@ function ShieldTracker:GetOptionsForBar(name)
 					--	end
 					--end,
 					set = function(info, val)
-						if val and val ~= "" and 
+						if val and val ~= "" and
 							rawget(self.db.profile.bars, val) == nil then
 							self:RenameBar(bar.name, val)
 						end
@@ -968,7 +955,7 @@ function ShieldTracker:GetOptionsForBar(name)
 							type = "toggle",
 							order = 20,
 							set = function(info, val)
-							    self.db.profile.bars[bar.name].locked = val 
+							    self.db.profile.bars[bar.name].locked = val
 								self.bars[bar.name]:Lock()
 							end,
 			                get = function(info)
@@ -1101,13 +1088,13 @@ function ShieldTracker:GetOptionsForBar(name)
 						width = {
 							order = 310,
 							name = L["Width"],
-							desc = L["BarWidth_Desc"],	
+							desc = L["BarWidth_Desc"],
 							type = "range",
 							min = 50,
 							max = 300,
 							step = 1,
 							set = function(info, val)
-							    self.db.profile.bars[bar.name].width = val 
+							    self.db.profile.bars[bar.name].width = val
 								self.bars[bar.name].bar:SetWidth(val)
 								self.bars[bar.name].bar.border:SetWidth(val+9)
 							end,
@@ -1124,13 +1111,13 @@ function ShieldTracker:GetOptionsForBar(name)
 							max = 30,
 							step = 1,
 							set = function(info, val)
-							    self.db.profile.bars[bar.name].height = val 
+							    self.db.profile.bars[bar.name].height = val
 								self.bars[bar.name].bar:SetHeight(val)
 								self.bars[bar.name].bar.border:SetHeight(val + 8)
 							end,
 							get = function(info, val)
 							    return self.db.profile.bars[bar.name].height
-							end,					
+							end,
 						},
 						scale = {
 							order = 330,
@@ -1159,7 +1146,7 @@ function ShieldTracker:GetOptionsForBar(name)
 						x = {
 							order = 410,
 							name = L["X Offset"],
-							desc = L["XOffset_Desc"],	
+							desc = L["XOffset_Desc"],
 							type = "range",
 							softMin = -floor(_G.GetScreenWidth()/2),
 							softMax = floor(_G.GetScreenWidth()/2),
@@ -1167,8 +1154,8 @@ function ShieldTracker:GetOptionsForBar(name)
 							set = function(info, val)
 							    self.db.profile.bars[bar.name].x = val
 								self.bars[bar.name].bar:SetPoint(
-									"CENTER", _G.UIParent, "CENTER", 
-									self.db.profile.bars[bar.name].x, 
+									"CENTER", _G.UIParent, "CENTER",
+									self.db.profile.bars[bar.name].x,
 									self.db.profile.bars[bar.name].y)
 							end,
 							get = function(info, val)
@@ -1178,7 +1165,7 @@ function ShieldTracker:GetOptionsForBar(name)
 						y = {
 							order = 420,
 							name = L["Y Offset"],
-							desc = L["YOffset_Desc"],	
+							desc = L["YOffset_Desc"],
 							type = "range",
 							softMin = -floor(_G.GetScreenHeight()/2),
 							softMax = floor(_G.GetScreenHeight()/2),
@@ -1186,8 +1173,8 @@ function ShieldTracker:GetOptionsForBar(name)
 							set = function(info, val)
 							    self.db.profile.bars[bar.name].y = val
 								self.bars[bar.name].bar:SetPoint(
-									"CENTER", _G.UIParent, "CENTER", 
-									self.db.profile.bars[bar.name].x, 
+									"CENTER", _G.UIParent, "CENTER",
+									self.db.profile.bars[bar.name].x,
 									self.db.profile.bars[bar.name].y)
 							end,
 							get = function(info, val)
@@ -1223,7 +1210,7 @@ function ShieldTracker:GetOptionsForBar(name)
 							get = function(info)
 						        local c = self.db.profile.bars[bar.name].textcolor
 							    return c.r, c.g, c.b, c.a
-							end,					
+							end,
 						},
 						color = {
 							order = 520,
@@ -1239,7 +1226,7 @@ function ShieldTracker:GetOptionsForBar(name)
 							get = function(info)
 						        local c = self.db.profile.bars[bar.name].color
 							    return c.r, c.g, c.b, c.a
-							end,					
+							end,
 						},
 						bgcolor = {
 							order = 530,
@@ -1255,7 +1242,7 @@ function ShieldTracker:GetOptionsForBar(name)
 							get = function(info)
 						        local c = self.db.profile.bars[bar.name].bgcolor
 							    return c.r, c.g, c.b, c.a
-							end,					
+							end,
 						},
 					},
 				},
@@ -1273,12 +1260,12 @@ function ShieldTracker:GetOptionsForBar(name)
 							min = 8,
 							max = 30,
 							step = 1,
-							set = function(info, val) 
+							set = function(info, val)
 								self.db.profile.bars[bar.name].font_size = val
 								self.bars[bar.name]:ResetFonts()
 							end,
 							get = function(info,val)
-								return self.db.profile.bars[bar.name].font_size 
+								return self.db.profile.bars[bar.name].font_size
 									or self.db.profile.font_size
 							end,
 						},
@@ -1290,10 +1277,10 @@ function ShieldTracker:GetOptionsForBar(name)
 							values = LSM:HashTable("font"),
 							dialogControl = 'LSM30_Font',
 							get = function()
-								return self.db.profile.bars[bar.name].font_face 
+								return self.db.profile.bars[bar.name].font_face
 									or self.db.profile.font_face
 							end,
-							set = function(info, val) 
+							set = function(info, val)
 							    self.db.profile.bars[bar.name].font_face = val
 								self.bars[bar.name]:ResetFonts()
 							end
@@ -1387,7 +1374,7 @@ function ShieldTracker:GetOptionsForBar(name)
 							get = function()
 								return self.db.profile.bars[bar.name].shown
 							end,
-							set = function(info,val) 
+							set = function(info,val)
 						        self.db.profile.bars[bar.name].shown = val
 						        self.bars[bar.name]:UpdateVisibility()
 						    end,
@@ -1447,7 +1434,7 @@ function ShieldTracker:GetOptionsForBar(name)
             name = category,
 		}
 		i = i + 1
-		
+
 		for spell, enabled in pairs(AbsorbsTracked[category]) do
 			barOpts.absorbOpts.args["AT_"..spell] = {
 				order = i,
@@ -1457,7 +1444,7 @@ function ShieldTracker:GetOptionsForBar(name)
 				get = function()
 					return self.db.profile.bars[bar.name].tracking[spell]
 				end,
-				set = function(info,val) 
+				set = function(info,val)
 			        self.db.profile.bars[bar.name].tracking[spell] = val
 					self.bars[bar.name]:CheckTracking()
 			    end,
@@ -1636,7 +1623,7 @@ function ShieldTracker:GetAnchorList(barName)
     bar.anchorList["None"] = L["None"]
     bar.anchorList["Custom"] = L["Custom"]
     bar.anchorList["Bar"] = L["Bar"]
-	if select(6, _G.GetAddOnInfo("CompactRunes")) ~= "MISSING" or 
+	if select(6, _G.GetAddOnInfo("CompactRunes")) ~= "MISSING" or
 		self.db.profile.bars[bar.name].anchorFrame == "Compact Runes" then
 		bar.anchorList["Compact Runes"] = L["Compact Runes"]
 	end
@@ -1741,7 +1728,7 @@ function ShieldTracker:GetLabelOptions(name)
 			min = 8,
 			max = 30,
 			step = 1,
-			set = function(info, val) 
+			set = function(info, val)
 				self.db.profile.bars[bar.name].label.fontSize = val
 				bar:UpdateLabel()
 			end,
@@ -1781,7 +1768,7 @@ function ShieldTracker:GetLabelOptions(name)
 		anchorX = {
 			order = 570,
 			name = L["X Offset"],
-			desc = L["XOffsetAnchor_Desc"],	
+			desc = L["XOffsetAnchor_Desc"],
 			type = "range",
 			softMin = -floor(_G.GetScreenWidth()),
 			softMax = floor(_G.GetScreenWidth()),
@@ -1800,7 +1787,7 @@ function ShieldTracker:GetLabelOptions(name)
 		anchorY = {
 			order = 580,
 			name = L["Y Offset"],
-			desc = L["YOffsetAnchor_Desc"],	
+			desc = L["YOffsetAnchor_Desc"],
 			type = "range",
 			softMin = -floor(_G.GetScreenHeight()),
 			softMax = floor(_G.GetScreenHeight()),
@@ -1927,7 +1914,7 @@ function ShieldTracker:GetAdvancedPositioning(name)
 		anchorX = {
 			order = 1050,
 			name = L["X Offset"],
-			desc = L["XOffsetAnchor_Desc"],	
+			desc = L["XOffsetAnchor_Desc"],
 			type = "range",
 			softMin = -floor(_G.GetScreenWidth()),
 			softMax = floor(_G.GetScreenWidth()),
@@ -1946,7 +1933,7 @@ function ShieldTracker:GetAdvancedPositioning(name)
 		anchorY = {
 			order = 1060,
 			name = L["Y Offset"],
-			desc = L["YOffsetAnchor_Desc"],	
+			desc = L["YOffsetAnchor_Desc"],
 			type = "range",
 			softMin = -floor(_G.GetScreenHeight()),
 			softMax = floor(_G.GetScreenHeight()),
@@ -2035,7 +2022,7 @@ function ShieldTracker:OnEnable()
 		    displayName, displayName, nil)
 		--self.optionsFrame.Bars = ACD:AddToBlizOptions(
 		--    displayName, L["Bars"], displayName, "barOpts")
-		LibStub("AceConfig-3.0"):RegisterOptionsTable("ShieldTracker-Profiles", 
+		LibStub("AceConfig-3.0"):RegisterOptionsTable("ShieldTracker-Profiles",
 			LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db))
 		self.optionsFrame.Profiles = ACD:AddToBlizOptions(
 		    "ShieldTracker-Profiles", "Profiles", displayName)
@@ -2186,8 +2173,8 @@ function ShieldTracker:CheckAuras(unit)
 
 	local i = 1
 	repeat
-		name, icon, count, dispelType, duration, expires, caster, stealable, 
-		consolidate, spellId, canApplyAura, isBossDebuff, 
+		name, icon, count, dispelType, duration, expires, caster, stealable,
+		consolidate, spellId, canApplyAura, isBossDebuff,
 		castByPlayer, new1, new2, value, value2 = UnitAura(unit, i)
 		if name == nil or spellId == nil then break end
 		local lookup = SpellIdsRev[spellId]
@@ -2199,8 +2186,8 @@ function ShieldTracker:CheckAuras(unit)
 
 	i = 1
 	repeat
-		name, icon, count, dispelType, duration, expires, caster, stealable, 
-		consolidate, spellId, canApplyAura, isBossDebuff, 
+		name, icon, count, dispelType, duration, expires, caster, stealable,
+		consolidate, spellId, canApplyAura, isBossDebuff,
 		castByPlayer, new1, new2, value, value2 = UnitDebuff(unit, i)
 		if name == nil or spellId == nil then break end
 		local lookup = SpellIdsRev[spellId]
@@ -2211,8 +2198,8 @@ function ShieldTracker:CheckAuras(unit)
 	until name == nil
 
 	for barName, bar in pairs(self.bars) do
-		if bar.db.enabled and (bar.unit == unit or 
-			(bar.unit == unitName) or 
+		if bar.db.enabled and (bar.unit == unit or
+			(bar.unit == unitName) or
 			(bar.unit == "mouseover" and unitName == self.mouseover)) then
 
 			local totalValue = 0
@@ -2226,7 +2213,7 @@ function ShieldTracker:CheckAuras(unit)
 						end
 					end
 					if bar.db.tracked == "Excluding" then
-						totalValue = (_G.UnitGetTotalAbsorbs(bar.unit) or 0) 
+						totalValue = (_G.UnitGetTotalAbsorbs(bar.unit) or 0)
 							- totalValue
 					end
 				end
@@ -2235,15 +2222,15 @@ function ShieldTracker:CheckAuras(unit)
 					bar:SetValue(totalValue)
 					bar.bar:Show()
 					if bar.singleSpell then
-				        name, icon, count, dispelType, duration, 
-						expires, caster, stealable, consolidate, spellId, 
-						canApplyAura, isBossDebuff, castByPlayer, 
+				        name, icon, count, dispelType, duration,
+						expires, caster, stealable, consolidate, spellId,
+						canApplyAura, isBossDebuff, castByPlayer,
 						new1, new2, value, value2
 						= addon.UnitAura(unit, SpellNames[bar.singleSpell])
 						if not name then
-					        name, icon, count, dispelType, duration, 
-							expires, caster, stealable, consolidate, spellId, 
-							canApplyAura, isBossDebuff, castByPlayer, 
+					        name, icon, count, dispelType, duration,
+							expires, caster, stealable, consolidate, spellId,
+							canApplyAura, isBossDebuff, castByPlayer,
 							new1, new2, value, value2
 							= addon.UnitDebuff(unit, SpellNames[bar.singleSpell])
 						end
@@ -2326,7 +2313,7 @@ function ShieldTracker:UpdateWatchedGroupUnits()
 		if bar and bar.db.unit == "group" then
 			local subgroup = bar.db.unitSubgroup or 0
 			local unitindex = bar.db.unitIndex or 0
-			local name = self.currentRoster[subgroup] and 
+			local name = self.currentRoster[subgroup] and
 				self.currentRoster[subgroup][unitindex]
 			if name then
 				self.watchedGroupUnits[name] = true
@@ -2358,7 +2345,7 @@ function ShieldTracker:UPDATE_MOUSEOVER_UNIT(event, unit)
 end
 
 function ShieldTracker:CheckMouseover()
-	self.watchingMouseover = 
+	self.watchingMouseover =
 		(self.watchedUnits["mouseover"] or 0) > 0 and true or false
 
 	wipe(self.mouseoverBars)
@@ -2380,7 +2367,7 @@ function ShieldTracker:UNIT_AURA(event, unit)
 end
 
 function ShieldTracker:CheckForOldUnitNames()
-	-- Check for the older Blizzard GetUnitName() format.  
+	-- Check for the older Blizzard GetUnitName() format.
 	-- There should be no spaces around the dash between
 	-- the player name and server name.
 	local fmt = "Invalid unit name for bar '%s'."
@@ -2422,9 +2409,9 @@ function Bar:Create(name, friendlyName, disableAnchor)
 	object.db = profile.bars[object.name]
 	object.watchingGroup = false
 	if object.db.unit ~= "group" then
-		object.unit = (object.db.unit == "named") and 
+		object.unit = (object.db.unit == "named") and
 			object.db.unitName or object.db.unit
-		ShieldTracker.watchedUnits[object.unit] = 
+		ShieldTracker.watchedUnits[object.unit] =
 			(ShieldTracker.watchedUnits[object.unit] or 0) + 1
 	else
 		object.watchingGroup = true
@@ -2548,7 +2535,7 @@ function Bar:UpdateLabel()
 		["CENTER"] = "CENTER",
 	}
 	self.bar.label:ClearAllPoints()
-	self.bar.label:SetPoint(localAnchors[self.db.label.anchorPoint] or "CENTER", self.bar, 
+	self.bar.label:SetPoint(localAnchors[self.db.label.anchorPoint] or "CENTER", self.bar,
 		self.db.label.anchorPoint, self.db.label.anchorX, self.db.label.anchorY)
 	if self.db.label.enabled then
 		self.bar.label:Show()
@@ -2575,7 +2562,7 @@ function Bar:Hide()
 end
 
 function Bar:Remove()
-	ShieldTracker.watchedUnits[self.unit] = 
+	ShieldTracker.watchedUnits[self.unit] =
 		(ShieldTracker.watchedUnits[self.unit] or 0) + 1
 	ShieldTracker.db.profile.bars[self.name] = nil
 	ShieldTracker.bars[self.name] = nil
@@ -2586,7 +2573,7 @@ end
 function Bar:UpdateUnit()
 	local oldUnit = self.unit
 	if oldUnit and not self.watchingGroup then
-		ShieldTracker.watchedUnits[oldUnit] = 
+		ShieldTracker.watchedUnits[oldUnit] =
 			(ShieldTracker.watchedUnits[oldUnit] or 0) - 1
 		if ShieldTracker.watchedUnits[oldUnit] < 1 then
 			ShieldTracker.watchedUnits[oldUnit] = nil
@@ -2594,11 +2581,11 @@ function Bar:UpdateUnit()
 	end
 
 	if self.db.unit ~= "group" then
-		local newUnit = (self.db.unit == "named") and 
+		local newUnit = (self.db.unit == "named") and
 			self.db.unitName or self.db.unit
 		self.unit = newUnit
 		self.watchingGroup = false
-		ShieldTracker.watchedUnits[newUnit] = 
+		ShieldTracker.watchedUnits[newUnit] =
 			(ShieldTracker.watchedUnits[newUnit] or 0) + 1
 	else
 		self.watchingGroup = true
@@ -2678,7 +2665,7 @@ function Bar:UpdatePosition()
 			ST:Print("Found anchor for bar '"..tostring(self.name).."'.")
 		end
 		self.bar:SetPoint(
-			self.db.anchorPt, anchorFrame, self.db.anchorFramePt, 
+			self.db.anchorPt, anchorFrame, self.db.anchorFramePt,
 			self.db.anchorX, self.db.anchorY)
 		self.anchorTries = 0
 	else
@@ -2697,7 +2684,7 @@ end
 
 function Bar:ResetFonts()
 	local ff, fh, fontFlags = ShieldTracker:GetFontSettings(self.name)
-	self.bar.value:SetFont(ff, fh, fontFlags)						
+	self.bar.value:SetFont(ff, fh, fontFlags)
 	self.bar.value:SetText(self.bar.value:GetText())
 	self.bar.time:SetFont(ff, fh, fontFlags)
 	self.bar.time:SetText(self.bar.time:GetText())
