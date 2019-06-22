@@ -2041,7 +2041,11 @@ local WatchedEvents = {
 }
 function ShieldTracker:Load()
 	for i = 1, #WatchedEvents do
-		self:RegisterEvent(WatchedEvents[i])
+		local event = WatchedEvents[i]
+		local success = pcall(self.RegisterEvent, self, event)
+		if not success then
+			self:Print("Error registering event: " + event)
+		end
 	end
 end
 
@@ -2050,7 +2054,7 @@ end
 
 function ShieldTracker:OnDisable()
 	for i = 1, #WatchedEvents do
-		self:UnregisterEvent(WatchedEvents[i])
+		pcall(self.UnregisterEvent, self, WatchedEvents[i])
 	end
 end
 
