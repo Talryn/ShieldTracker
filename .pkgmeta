@@ -48,7 +48,7 @@ externals:
         tag: latest
 
     Libs/AceGUI-3.0-Completing-EditBox:
-        url: https://repos.wowace.com/wow/acegui-3-0-completing-editbox
+        url: https://repos.wowace.com/wow/acegui-3-0-completing-editbox/trunk
         tag: latest
 
 ignore:
