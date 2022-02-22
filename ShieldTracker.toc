@@ -1,4 +1,4 @@
-## Interface: 90105
+## Interface: 90200
 ## Title: Shield Tracker
 ## Notes: Tracks a wide variety of shields / absorbs.
 ## Author: Talryn
