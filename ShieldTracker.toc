@@ -1,4 +1,4 @@
-## Interface: 90200
+## Interface: 90205
 ## Title: Shield Tracker
 ## Notes: Tracks a wide variety of shields / absorbs.
 ## Author: Talryn
@@ -7,6 +7,7 @@
 ## OptionalDeps: Ace3, LibDataBroker-1.1, LibDBIcon-1.0, LibQTip-1.0, LibSharedMedia-3.0, AceGUI-3.0-SharedMediaWidgets, Tukui, ElvUI, AceGUI-3.0-Completing-EditBox
 ## X-Curse-Project-ID: 44978
 ## X-WoWI-ID: 24953
+## X-Wago-ID: kaNe1nN2
 
 embeds.xml
 
