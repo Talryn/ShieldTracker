@@ -403,7 +403,7 @@ Broker.obj = LDB:NewDataObject(_G.GetAddOnMetadata(ADDON_NAME, "Title"), {
     barB = 1,
 	OnClick = function(clickedframe, button)
 		if button == "RightButton" then
-			local optionsFrame = _G.InterfaceOptionsFrame
+			local optionsFrame = self.optionsFrame
 			if optionsFrame:IsVisible() then
 				optionsFrame:Hide()
 			else
