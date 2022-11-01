@@ -77,6 +77,27 @@ addon.UnitDebuff = function(unit, spellName, filter)
 	return nil
 end
 
+function addon.IsGameOptionsVisible()
+	local optionsFrame = _G.SettingsPanel or _G.InterfaceOptionsFrame
+    return optionsFrame and optionsFrame:IsVisible() or false
+end
+
+function addon.ShowGameOptions()
+	local optionsFrame = _G.SettingsPanel or _G.InterfaceOptionsFrame
+    optionsFrame:Show()
+end
+
+function addon.HideGameOptions()
+	local optionsFrame = _G.SettingsPanel or _G.InterfaceOptionsFrame
+	if _G.SettingsPanel then
+		if not _G.UnitAffectingCombat("player") then
+			_G.HideUIPanel(optionsFrame)
+		end
+	else
+		optionsFrame:Hide()
+	end
+end
+
 -- Define Bar for now but the rest is at the bottom of the file.
 local Bar = {}
 
@@ -403,9 +424,8 @@ Broker.obj = LDB:NewDataObject(_G.GetAddOnMetadata(ADDON_NAME, "Title"), {
     barB = 1,
 	OnClick = function(clickedframe, button)
 		if button == "RightButton" then
-			local optionsFrame = self.optionsFrame
-			if optionsFrame:IsVisible() then
-				optionsFrame:Hide()
+			if addon.IsGameOptionsVisible() then
+				addon.HideGameOptions()
 			else
 				ShieldTracker:ShowOptions()
 			end
@@ -527,8 +547,13 @@ local defaults = {
 }
 
 function ShieldTracker:ShowOptions()
-	_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
-	_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
+	if Settings and Settings.OpenToCategory and 
+		_G.type(Settings.OpenToCategory) == "function" then
+		Settings.OpenToCategory(addon.addonTitle)
+	else
+		_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
+		_G.InterfaceOptionsFrame_OpenToCategory(self.optionsFrame.Main)
+	end
 end
 
 function ShieldTracker:SetSkin(update)
